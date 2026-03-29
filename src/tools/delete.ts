@@ -1,0 +1,20 @@
+import { tool } from "langchain";
+import z from "zod";
+import { gmail } from "../providers/gmail.ts";
+
+export const deleteEmail = tool(
+  async ({ id }) => {
+    await gmail.users.messages.trash({
+      userId: "me",
+      id,
+    });
+    return `Email ${id} deleted successfully.`;
+  },
+  {
+    name: "delete_email",
+    description: "Delete an email via the Gmail API. Requires an ID.",
+    schema: z.object({
+      id: z.string(),
+    }),
+  },
+);
