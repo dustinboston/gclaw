@@ -6,15 +6,23 @@ import { MemorySaver } from "@langchain/langgraph";
 import { createAgent, HumanMessage, SystemMessage } from "langchain";
 import { cleanEmail } from "./tools/clean.ts";
 import { model } from "./model.ts";
+import { loadAgentsFile } from "./agents-file.ts";
 
 // Setup
 // ----------------------------------------------------------------------------
+
+const agentsFile = await loadAgentsFile();
 
 const supervisorPrompt = `
 You are a helpful personal assistant.
 You can clean up a user's email inbox with the clean_email tool
 Break down user requests into appropriate tool calls and coordinate the results.
 When a request involves multiple actions, use multiple tools in sequence.
+
+---
+
+${agentsFile}
+
 `.trim();
 
 const supervisorAgent = createAgent({
@@ -30,15 +38,13 @@ const supervisorStream = await supervisorAgent.stream(
   {
     messages: [new HumanMessage("Clean up my email inbox.")],
   },
-  config,
+  { ...config, streamMode: "messages" },
 );
 
-for await (const step of supervisorStream) {
-  for (const update of Object.values(step)) {
-    if (update && typeof update === "object" && "messages" in update) {
-      for (const message of update.messages) {
-        console.log(message.toFormattedString());
-      }
-    }
+for await (const [event, data] of supervisorStream) {
+  if (String(event) === "messages" && data.text) {
+    process.stdout.write(data.text);
   }
 }
+
+process.stdout.write("\n");

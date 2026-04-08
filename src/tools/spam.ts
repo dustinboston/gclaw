@@ -1,17 +1,19 @@
 import { tool } from "langchain";
 import z from "zod";
-import { gmail } from "../providers/gmail.ts";
+import { gmail, gmailRequest } from "../providers/gmail.ts";
 
 export const spamEmail = tool(
   async ({ id }) => {
-    await gmail.users.messages.modify({
-      userId: "me",
-      id,
-      requestBody: {
-        addLabelIds: ["SPAM"],
-        removeLabelIds: ["INBOX"],
-      },
-    });
+    await gmailRequest(() =>
+      gmail.users.messages.modify({
+        userId: "me",
+        id,
+        requestBody: {
+          addLabelIds: ["SPAM"],
+          removeLabelIds: ["INBOX"],
+        },
+      }),
+    );
     return `Email ${id} marked as spam successfully.`;
   },
   {

@@ -1,16 +1,18 @@
 import { tool } from "langchain";
 import z from "zod";
-import { gmail } from "../providers/gmail.ts";
+import { gmail, gmailRequest } from "../providers/gmail.ts";
 
 export const archiveEmail = tool(
   async ({ id }) => {
-    await gmail.users.messages.modify({
-      userId: "me",
-      id,
-      requestBody: {
-        removeLabelIds: ["INBOX"],
-      },
-    });
+    await gmailRequest(() =>
+      gmail.users.messages.modify({
+        userId: "me",
+        id,
+        requestBody: {
+          removeLabelIds: ["INBOX"],
+        },
+      }),
+    );
     return `Email ${id} archived successfully.`;
   },
   {

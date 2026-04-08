@@ -23,4 +23,37 @@ auth.on("tokens", (tokens) => {
 });
 
 export { auth };
-export const gmail = google.gmail({ version: "v1", auth });
+
+const rawGmail = google.gmail({ version: "v1", auth });
+
+// Rate limiter to avoid "Too many concurrent requests" errors from Google.
+const MAX_CONCURRENT = 2;
+let active = 0;
+const queue: Array<() => void> = [];
+
+function acquire(): Promise<void> {
+  if (active < MAX_CONCURRENT) {
+    active++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => queue.push(resolve));
+}
+
+function release() {
+  if (queue.length > 0) {
+    queue.shift()!();
+  } else {
+    active--;
+  }
+}
+
+export async function gmailRequest<T>(fn: () => Promise<T>): Promise<T> {
+  await acquire();
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
+export const gmail = rawGmail;

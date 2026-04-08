@@ -1,15 +1,37 @@
-import { HumanMessage, tool } from "langchain";
+import { HumanMessage, tool, AIMessageChunk, ToolMessage } from "langchain";
 import { emailAgent } from "../agents/email.ts";
 import z from "zod";
 
 export const cleanEmail = tool(
   async ({ request }) => {
-    let result = await emailAgent.invoke(
+    const stream = await emailAgent.stream(
       { messages: [new HumanMessage(request)] },
-      { recursionLimit: 150 },
+      { recursionLimit: 150, streamMode: "updates" },
     );
-    const lastMessage = result.messages.at(-1);
-    return lastMessage?.text;
+
+    let lastMessage: { text?: string } | undefined;
+
+    for await (const update of stream) {
+      for (const [node, state] of Object.entries(update)) {
+        if (!state || typeof state !== "object" || !("messages" in state))
+          continue;
+        for (const msg of (state as { messages: unknown[] }).messages) {
+          if (msg instanceof AIMessageChunk) {
+            for (const tc of msg.tool_calls ?? []) {
+              // console.log(`  [${node}] tool call: ${tc.name}(${JSON.stringify(tc.args)})`);
+            }
+            if (msg.text) {
+              process.stdout.write(msg.text);
+            }
+            lastMessage = msg;
+          } else if (msg instanceof ToolMessage) {
+            // console.log(`  [${node}] tool result: ${(msg.content as string).slice(0, 120)}`);
+          }
+        }
+      }
+    }
+
+    return lastMessage?.text ?? "No response from email agent.";
   },
   {
     name: "clean_email",

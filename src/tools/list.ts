@@ -1,14 +1,16 @@
 import { tool } from "langchain";
 import z from "zod";
-import { gmail } from "../providers/gmail.ts";
+import { gmail, gmailRequest } from "../providers/gmail.ts";
 
 export const listEmail = tool(
   async ({ label, maxResults }) => {
-    const res = await gmail.users.messages.list({
-      userId: "me",
-      labelIds: [label],
-      maxResults,
-    });
+    const res = await gmailRequest(() =>
+      gmail.users.messages.list({
+        userId: "me",
+        labelIds: [label],
+        maxResults,
+      }),
+    );
     const messages = res.data.messages ?? [];
     return JSON.stringify(messages);
   },

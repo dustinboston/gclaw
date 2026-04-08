@@ -1,0 +1,21 @@
+{
+  "planner": {
+    "provider": "google",
+    "model": "gemini-3.1-pro-preview",
+    "temperature": 0.7,
+    "maxTokens": 1048576
+  },
+  "developer": {
+    "provider": "google",
+    "model": "gemini-3.1-pro-preview",
+    "temperature": 0.3,
+    "maxTokens": 1048576
+  },
+  "tester": {
+    "provider": "google",
+    "model": "gemini-3.1-pro-preview",
+    "temperature": 0.3,
+    "maxTokens": 1048576
+  },
+  "allowedCommands": ["^bun test", "^bun run typecheck"]
+}

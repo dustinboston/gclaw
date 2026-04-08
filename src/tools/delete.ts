@@ -1,13 +1,15 @@
 import { tool } from "langchain";
 import z from "zod";
-import { gmail } from "../providers/gmail.ts";
+import { gmail, gmailRequest } from "../providers/gmail.ts";
 
 export const deleteEmail = tool(
   async ({ id }) => {
-    await gmail.users.messages.trash({
-      userId: "me",
-      id,
-    });
+    await gmailRequest(() =>
+      gmail.users.messages.trash({
+        userId: "me",
+        id,
+      }),
+    );
     return `Email ${id} deleted successfully.`;
   },
   {

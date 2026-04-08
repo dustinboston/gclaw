@@ -1,15 +1,17 @@
 import { tool } from "langchain";
 import z from "zod";
-import { gmail } from "../providers/gmail.ts";
+import { gmail, gmailRequest } from "../providers/gmail.ts";
 
 export const readEmail = tool(
   async ({ id }) => {
-    const res = await gmail.users.messages.get({
-      userId: "me",
-      id,
-      format: "metadata",
-      metadataHeaders: ["From", "To", "Subject", "Date", "List-Unsubscribe"],
-    });
+    const res = await gmailRequest(() =>
+      gmail.users.messages.get({
+        userId: "me",
+        id,
+        format: "metadata",
+        metadataHeaders: ["From", "To", "Subject", "Date", "List-Unsubscribe"],
+      }),
+    );
 
     const headers = res.data.labelIds ?? [];
     const getHeader = (name: string) =>
