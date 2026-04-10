@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 
 const { mockStream } = vi.hoisted(() => ({ mockStream: vi.fn() }));
 
-vi.mock("../agents/email.ts", () => ({
-  emailAgent: { stream: mockStream },
+vi.mock("../agents/clean.ts", () => ({
+  cleanAgent: { stream: mockStream },
 }));
 
 import { cleanEmail } from "./clean.ts";

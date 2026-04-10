@@ -1,12 +1,12 @@
 import { HumanMessage, tool, AIMessageChunk } from "langchain";
-import { emailAgent } from "../agents/email.ts";
+import { cleanAgent } from "../agents/clean.ts";
 import z from "zod";
 
 const LOG_TOOL_CALLS = false;
 
 export const cleanEmail = tool(
   async ({ request }) => {
-    const stream = await emailAgent.stream(
+    const stream = await cleanAgent.stream(
       { messages: [new HumanMessage(request)] },
       { recursionLimit: 150, streamMode: "messages" },
     );
@@ -27,6 +27,7 @@ export const cleanEmail = tool(
       }
     }
 
+    if (lastText) process.stdout.write("\n");
     return "Email cleanup complete. Results already displayed to user.";
   },
   {

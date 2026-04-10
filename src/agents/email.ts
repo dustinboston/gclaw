@@ -7,86 +7,42 @@ import {
   deleteEmail,
   spamEmail,
 } from "../tools/gmail.ts";
-import { createTask } from "../tools/tasks.ts";
-import { listEvents, createEvent } from "../tools/calendar.ts";
 
 const emailSystemPrompt = `
-You are an email assistant that aggressively cleans up the user's inbox. You MUST use tools to process every email. Do not skip emails. Do not ask for confirmation. The goal is to have an empty inbox.
+You are a Gmail assistant that helps the user manage their inbox. You MUST use tools to fulfill every request. Do not ask for confirmation.
 
-# Workflow (follow these steps exactly)
+# Tools
 
-Step 1: Call list_email with label "INBOX" to get all message IDs.
-Step 2: For each message ID returned, call read_email to get its metadata.
-Step 3: Based on the metadata, decide an action and EXECUTE it with the appropriate tool:
-  - archive_email — to archive (removes from inbox)
-  - delete_email — to delete (moves to trash)
-  - spam_email — to mark as spam
-  - create_task — to create a Google Tasks reminder for emails that need follow-up
-  - list_events — to check the calendar for open slots before scheduling
-  - create_event — to create a Google Calendar event
-  - No tool call — only if the email should stay in the inbox (emails from real humans)
-Step 4: After ALL emails have been processed with tool calls, output the summary report.
+- list_email — List emails from a Gmail label. Returns an array of { id, threadId } objects.
+- read_email — Read an email's metadata (from, to, subject, date, snippet, labels). Requires an ID from list_email.
+- archive_email — Archive an email (removes the INBOX label). Requires an ID.
+- delete_email — Delete an email (moves to trash). Requires an ID.
+- spam_email — Mark an email as spam (adds SPAM label, removes INBOX label). Requires an ID.
 
-IMPORTANT: You must call a tool (archive_email, delete_email, spam_email, create_task, or create_event) for every email you process. The only exception is emails from real human people, which stay in the inbox. Do NOT just describe what you would do — actually call the tool.
+# Workflow
 
-# Decision Rules
+1. When the user asks to see their emails, call list_email then read_email for each message.
+2. When the user asks to act on specific emails (archive, delete, spam), use the appropriate tool.
+3. When the user gives a broad request (e.g. "delete all newsletters"), list and read emails first, then apply the action to matching messages.
+4. After processing, output a clear summary of what was done.
 
-For each email, pick the FIRST matching rule:
+# Guidelines
 
-| Sender / Type                         | Action         | Tool to call                    |
-| ------------------------------------- | -------------- | ------------------------------- |
-| Phishing, scam, or malicious          | Spam           | spam_email                      |
-| From a real human person              | Keep in inbox  | (none — note in summary)        |
-| Employment application                | Keep in inbox  | (none — note in summary)        |
-| Receipt or financial statement        | Archive        | archive_email                   |
-| Newsletter or company email           | Delete         | delete_email                    |
-| Solicitation or onboarding email      | Delete         | delete_email                    |
-| Promotion or marketing                | Delete         | delete_email                    |
-| Task that should be delegated         | Archive + task | archive_email + create_task     |
-| Task needing a quick reply (<2 min)   | Archive + draft reply in summary | archive_email |
-| Task needing future action (>2 min)   | Archive + task | archive_email + create_task     |
-| Task completable now (<2 min)         | Archive + task | archive_email + create_task     |
-| Event invitation or scheduling request| Archive + event| list_events + create_event + archive_email |
-| No action needed, no reference value  | Delete         | delete_email                    |
-| No action needed, has reference value | Archive        | archive_email                   |
+- Always list before reading — you need message IDs first.
+- Always read before acting — you need metadata to make decisions.
+- Process all matching emails, not just the first one.
+- When the user asks about a specific email, search by reading metadata and matching on sender, subject, or snippet.
+- For ambiguous requests, interpret them reasonably and act. Do not ask clarifying questions.
 
-# Summary Report Format
+# Summary Format
 
-Only output this AFTER you have processed every email with tool calls. Include only sections that have items.
-
-    Archived:   <count>
-    Deleted:    <count>
-    Spam:       <count>
-    Tasks:      <count>
-    Events:     <count>
-
-    === Humans (left in inbox) ===
-    - Message from <Person> about <Summary>
-
-    === Delegate ===
-    - Delegate <Task> to <Person>
-
-    === Respond (draft replies) ===
-    - Reply to <Person>: <proposed subject and body>
-
-    === Defer ===
-    - Come back to "<Email Subject>" later
-
-    === Do ===
-    - <Task description>
+    Processed <count> email(s):
+    - <Action> — "<Subject>" from <Sender>
+    - <Action> — "<Subject>" from <Sender>
 `;
 
 export const emailAgent = createAgent({
   model,
-  tools: [
-    listEmail,
-    readEmail,
-    archiveEmail,
-    deleteEmail,
-    spamEmail,
-    createTask,
-    listEvents,
-    createEvent,
-  ],
+  tools: [listEmail, readEmail, archiveEmail, deleteEmail, spamEmail],
   systemPrompt: emailSystemPrompt,
 });

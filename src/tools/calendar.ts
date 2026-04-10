@@ -1,10 +1,10 @@
 import { HumanMessage, tool, AIMessageChunk } from "langchain";
-import { calendarAgent } from "../agents/calendar.ts";
 import z from "zod";
 import { calendar } from "../providers/calendar.ts";
 
 export const manageCalendar = tool(
   async ({ request }) => {
+    const { calendarAgent } = await import("../agents/calendar.ts");
     const stream = await calendarAgent.stream(
       { messages: [new HumanMessage(request)] },
       { recursionLimit: 50, streamMode: "messages" },
@@ -19,6 +19,7 @@ export const manageCalendar = tool(
       }
     }
 
+    if (lastText) process.stdout.write("\n");
     return "Calendar request complete. Results already displayed to user.";
   },
   {

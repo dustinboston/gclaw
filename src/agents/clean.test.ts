@@ -13,13 +13,20 @@ vi.mock("../tools/gmail.ts", () => ({
   deleteEmail: { name: "delete_email" },
   spamEmail: { name: "spam_email" },
 }));
+vi.mock("../tools/tasks.ts", () => ({
+  createTask: { name: "create_task" },
+}));
+vi.mock("../tools/calendar.ts", () => ({
+  listEvents: { name: "list_events" },
+  createEvent: { name: "create_event" },
+}));
 
-import { emailAgent } from "./email.ts";
+import { cleanAgent } from "./clean.ts";
 
-describe("emailAgent", () => {
+describe("cleanAgent", () => {
   it("is created via createAgent", () => {
     expect(mockCreateAgent).toHaveBeenCalledTimes(1);
-    expect(emailAgent).toBeDefined();
+    expect(cleanAgent).toBeDefined();
   });
 
   it("has the correct tools", () => {
@@ -31,12 +38,15 @@ describe("emailAgent", () => {
       "archive_email",
       "delete_email",
       "spam_email",
+      "create_task",
+      "list_events",
+      "create_event",
     ]);
   });
 
-  it("has a system prompt with Gmail instructions", () => {
+  it("has a system prompt with cleanup instructions", () => {
     const call = mockCreateAgent.mock.calls[0][0];
-    expect(call.systemPrompt).toContain("Gmail assistant");
-    expect(call.systemPrompt).toContain("list_email");
+    expect(call.systemPrompt).toContain("aggressively cleans up");
+    expect(call.systemPrompt).toContain("archive_email");
   });
 });

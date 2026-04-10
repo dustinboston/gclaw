@@ -1,10 +1,10 @@
 import { HumanMessage, tool, AIMessageChunk } from "langchain";
-import { tasksAgent } from "../agents/tasks.ts";
 import z from "zod";
 import { tasks } from "../providers/tasks.ts";
 
 export const manageTasks = tool(
   async ({ request }) => {
+    const { tasksAgent } = await import("../agents/tasks.ts");
     const stream = await tasksAgent.stream(
       { messages: [new HumanMessage(request)] },
       { recursionLimit: 50, streamMode: "messages" },
@@ -19,6 +19,7 @@ export const manageTasks = tool(
       }
     }
 
+    if (lastText) process.stdout.write("\n");
     return "Task request complete. Results already displayed to user.";
   },
   {

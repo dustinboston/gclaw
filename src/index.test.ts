@@ -47,8 +47,26 @@ vi.mock("langchain", () => ({
   AIMessageChunk: MockAIMessageChunk,
 }));
 vi.mock("./tools/clean.ts", () => ({ cleanEmail: {} }));
-vi.mock("./tools/calendar.ts", () => ({ manageCalendar: {} }));
-vi.mock("./tools/tasks.ts", () => ({ manageTasks: {} }));
+vi.mock("./tools/gmail.ts", () => ({
+  manageEmail: {},
+  listEmail: {},
+  readEmail: {},
+  archiveEmail: {},
+  deleteEmail: {},
+  spamEmail: {},
+}));
+vi.mock("./tools/calendar.ts", () => ({
+  manageCalendar: {},
+  listEvents: {},
+  createEvent: {},
+}));
+vi.mock("./tools/tasks.ts", () => ({
+  manageTasks: {},
+  listTasks: {},
+  completeTask: {},
+  updateTask: {},
+  createTask: {},
+}));
 vi.mock("./model.ts", () => ({ model: {} }));
 vi.mock("./agents-file.ts", () => ({
   loadAgentsFile: vi.fn().mockResolvedValue("agent file content"),

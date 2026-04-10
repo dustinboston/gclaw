@@ -1,6 +1,40 @@
-import { tool } from "langchain";
+import { HumanMessage, tool, AIMessageChunk } from "langchain";
 import z from "zod";
 import { gmail, gmailRequest } from "../providers/gmail.ts";
+
+export const manageEmail = tool(
+  async ({ request }) => {
+    const { emailAgent } = await import("../agents/email.ts");
+    const stream = await emailAgent.stream(
+      { messages: [new HumanMessage(request)] },
+      { recursionLimit: 150, streamMode: "messages" },
+    );
+
+    let lastText = "";
+
+    for await (const [message] of stream) {
+      if (!(message instanceof AIMessageChunk)) continue;
+      if (message.text) {
+        lastText += message.text;
+      }
+    }
+
+    if (lastText) process.stdout.write("\n");
+    return "Email request complete. Results already displayed to user.";
+  },
+  {
+    name: "manage_email",
+    description: `
+    Manage the user's Gmail inbox.
+    Use this for any email-related request: cleaning up the inbox, listing emails,
+    reading messages, archiving, deleting, or marking as spam.
+    Input: natural language email request (e.g. 'clean up my inbox')
+    `,
+    schema: z.object({
+      request: z.string().describe("Natural language email request"),
+    }),
+  },
+);
 
 export const listEmail = tool(
   async ({ label, maxResults }) => {
