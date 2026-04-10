@@ -6,17 +6,17 @@ const { mockCreateAgent } = vi.hoisted(() => ({
 
 vi.mock("langchain", () => ({ createAgent: mockCreateAgent }));
 vi.mock("../model.ts", () => ({ model: {} }));
-vi.mock("../tools/list.ts", () => ({ listEmail: { name: "list_email" } }));
-vi.mock("../tools/read.ts", () => ({ readEmail: { name: "read_email" } }));
-vi.mock("../tools/archive.ts", () => ({
+vi.mock("../tools/gmail.ts", () => ({
+  listEmail: { name: "list_email" },
+  readEmail: { name: "read_email" },
   archiveEmail: { name: "archive_email" },
-}));
-vi.mock("../tools/delete.ts", () => ({
   deleteEmail: { name: "delete_email" },
+  spamEmail: { name: "spam_email" },
 }));
-vi.mock("../tools/spam.ts", () => ({ spamEmail: { name: "spam_email" } }));
-vi.mock("../tools/task.ts", () => ({ createTask: { name: "create_task" } }));
-vi.mock("../tools/event.ts", () => ({
+vi.mock("../tools/tasks.ts", () => ({
+  createTask: { name: "create_task" },
+}));
+vi.mock("../tools/calendar.ts", () => ({
   listEvents: { name: "list_events" },
   createEvent: { name: "create_event" },
 }));

@@ -1,12 +1,14 @@
 import { createAgent } from "langchain";
 import { model } from "../model.ts";
-import { listEmail } from "../tools/list.ts";
-import { readEmail } from "../tools/read.ts";
-import { archiveEmail } from "../tools/archive.ts";
-import { deleteEmail } from "../tools/delete.ts";
-import { spamEmail } from "../tools/spam.ts";
-import { createTask } from "../tools/task.ts";
-import { listEvents, createEvent } from "../tools/event.ts";
+import {
+  listEmail,
+  readEmail,
+  archiveEmail,
+  deleteEmail,
+  spamEmail,
+} from "../tools/gmail.ts";
+import { createTask } from "../tools/tasks.ts";
+import { listEvents, createEvent } from "../tools/calendar.ts";
 
 const emailSystemPrompt = `
 You are an email assistant that aggressively cleans up the user's inbox. You MUST use tools to process every email. Do not skip emails. Do not ask for confirmation. The goal is to have an empty inbox.

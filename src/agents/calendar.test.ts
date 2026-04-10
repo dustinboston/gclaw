@@ -6,7 +6,7 @@ const { mockCreateAgent } = vi.hoisted(() => ({
 
 vi.mock("langchain", () => ({ createAgent: mockCreateAgent }));
 vi.mock("../model.ts", () => ({ model: {} }));
-vi.mock("../tools/event.ts", () => ({
+vi.mock("../tools/calendar.ts", () => ({
   listEvents: { name: "list_events" },
   createEvent: { name: "create_event" },
 }));
