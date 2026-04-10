@@ -6,7 +6,11 @@ import { auth } from "../src/providers/gmail.ts";
 const url = auth.generateAuthUrl({
   access_type: "offline",
   prompt: "consent",
-  scope: ["https://mail.google.com/"],
+  scope: [
+    "https://mail.google.com/",
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/tasks",
+  ],
 });
 
 const server = createServer(async (req, res) => {

@@ -16,7 +16,7 @@ export const deleteEmail = tool(
     name: "delete_email",
     description: "Delete an email via the Gmail API. Requires an ID.",
     schema: z.object({
-      id: z.string(),
+      id: z.string().describe("The message ID from list_email or read_email"),
     }),
   },
 );

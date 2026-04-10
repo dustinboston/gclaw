@@ -20,7 +20,7 @@ export const spamEmail = tool(
     name: "spam_email",
     description: "Mark an email as spam via the Gmail API. Requires an ID.",
     schema: z.object({
-      id: z.string(),
+      id: z.string().describe("The message ID from list_email or read_email"),
     }),
   },
 );

@@ -19,7 +19,7 @@ export const archiveEmail = tool(
     name: "archive_email",
     description: "Archive an email via the Gmail API. Requires an ID.",
     schema: z.object({
-      id: z.string(),
+      id: z.string().describe("The message ID from list_email or read_email"),
     }),
   },
 );
