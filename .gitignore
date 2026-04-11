@@ -2,5 +2,6 @@ node_modules
 .env
 .tokens.json
 coverage
+bin
 audit.log
 winbox.log

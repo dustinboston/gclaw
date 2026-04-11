@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Winbox is an AI personal assistant that manages a user's Gmail inbox. It uses a two-tier LangChain agent architecture backed by OpenAI, with Google APIs for Gmail access.
+Winbox is an AI personal assistant that manages a user's Gmail inbox, Google Calendar, and Google Tasks. It uses a multi-tier LangChain agent architecture backed by OpenAI, with Google APIs for Gmail, Calendar, and Tasks access.
 
 ## Commands
 
@@ -24,11 +24,13 @@ Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log
 
 ## Architecture
 
-**Two-tier agent system:**
+**Multi-tier agent system:**
 
-1. **Supervisor agent** (`src/index.ts`) — top-level agent with a single `clean_email` tool. Receives high-level user requests.
+1. **Supervisor agent** (`src/index.ts`) — top-level agent with tools: `clean_email`, `manage_email`, `manage_calendar`, `manage_tasks`. Routes user requests to specialized sub-agents.
 2. **Clean agent** (`src/agents/clean.ts`) — two-phase cleanup agent invoked by `clean_email`. Phase 1 (plan): reads all inbox emails and proposes actions without executing. Phase 2 (execute): after user confirmation, executes the approved plan. Created via `createCleanAgent("plan" | "execute")`.
 3. **Email agent** (`src/agents/email.ts`) — specialized sub-agent invoked by `manage_email`. Has granular Gmail tools: `list_email`, `read_email`, `archive_email`, `delete_email`, `spam_email`, plus undo tools: `unarchive_email`, `undelete_email`, `unspam_email`.
+4. **Calendar agent** (`src/agents/calendar.ts`) — sub-agent invoked by `manage_calendar`. Tools: `list_events`, `create_event`.
+5. **Tasks agent** (`src/agents/tasks.ts`) — sub-agent invoked by `manage_tasks`. Tools: `list_tasks`, `create_task`.
 
 **Destructive operation safeguards:**
 
@@ -47,7 +49,9 @@ Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log
 - `src/metrics.ts` — in-memory metrics collection for tool/API call latency, success/failure rates; `withMetrics()` wrapper and `logMetricsSummary()` for periodic reporting
 - `src/config.ts` — centralized Zod-validated config from env vars, with defaults. Fails fast on missing required vars.
 - `src/model.ts` — shared OpenAI model instance used by both agents
-- `src/tools/` — each file exports one LangChain tool wrapping a Gmail API call
+- `src/tools/` — each file exports LangChain tools wrapping Google API calls (Gmail, Calendar, Tasks)
+- `src/providers/calendar.ts` — Google Calendar API client with rate limiting
+- `src/providers/tasks.ts` — Google Tasks API client with rate limiting
 - `src/agents-file.ts` — loads an agent instruction file (AGENTS.md, CLAUDE.md, etc.) from the project root and injects it into the email agent's system prompt at runtime. Not cached, so edits are picked up without restart.
 - `scripts/authorize.ts` — one-time OAuth2 authorization flow (local HTTP server on port 3000)
 
