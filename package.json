@@ -1,5 +1,5 @@
 {
-  "name": "winbox",
+  "name": "gclaw",
   "version": "1.0.0",
   "private": true,
   "license": "CC-BY-4.0",
@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/index.ts --compile --outfile bin/winbox",
+    "build": "bun build src/index.ts --compile --outfile bin/gclaw",
     "lint": "xo",
     "lint:fix": "xo --fix",
     "db:up": "docker compose up -d",

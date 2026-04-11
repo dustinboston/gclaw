@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Winbox is an AI personal assistant that manages a user's Gmail inbox, Google Calendar, and Google Tasks. It uses a multi-tier LangChain agent architecture backed by OpenAI, with Google APIs for Gmail, Calendar, and Tasks access.
+G-Claw is an AI personal assistant that manages a user's Gmail inbox, Google Calendar, and Google Tasks. It uses a multi-tier LangChain agent architecture backed by OpenAI, with Google APIs for Gmail, Calendar, and Tasks access.
 
 ## Commands
 
@@ -23,7 +23,7 @@ pnpm db:reset         # Destroy database volume and restart fresh
 
 Requires a `.env` file with: `OPENAI_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`. Google OAuth tokens are stored encrypted in `.tokens.json` (created by `pnpm authorize`). Generate an encryption key with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. If you get `invalid_grant`, re-run `pnpm authorize`.
 
-Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log`), `OPENAI_MODEL` (`gpt-5.4`), `OAUTH_REDIRECT_URL` (`http://localhost:3000`), `OAUTH_PORT` (`3000`), `GMAIL_MAX_CONCURRENT` (`2`), `CALENDAR_MAX_CONCURRENT` (`2`), `TASKS_MAX_CONCURRENT` (`2`), `DEFAULT_CALENDAR_ID` (`primary`), `DEFAULT_TASK_LIST_ID` (`@default`), `DATABASE_URL` (`postgresql://winbox:winbox@localhost:5432/winbox`). All config is validated at startup via Zod in `src/config.ts`.
+Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`gclaw.log`), `OPENAI_MODEL` (`gpt-5.4`), `OAUTH_REDIRECT_URL` (`http://localhost:3000`), `OAUTH_PORT` (`3000`), `GMAIL_MAX_CONCURRENT` (`2`), `CALENDAR_MAX_CONCURRENT` (`2`), `TASKS_MAX_CONCURRENT` (`2`), `DEFAULT_CALENDAR_ID` (`primary`), `DEFAULT_TASK_LIST_ID` (`@default`), `DATABASE_URL` (`postgresql://gclaw:gclaw@localhost:5432/gclaw`). All config is validated at startup via Zod in `src/config.ts`.
 
 ## Architecture
 
@@ -48,7 +48,7 @@ Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log
 - `src/crypto.ts` — AES-256-GCM encryption/decryption for token storage, keyed by `TOKEN_ENCRYPTION_KEY`
 - `src/retry.ts` — exponential backoff with jitter for transient API failures (429, 5xx, network errors)
 - `src/audit.ts` — structured audit log for email operations (archive, delete, spam, and their undo counterparts) written to PostgreSQL `audit_log` table. Each entry includes email metadata (subject, from) and the reason for the action.
-- `src/logger.ts` — structured logging via pino (writes to `winbox.log`), configurable with `LOG_LEVEL` and `LOG_FILE`
+- `src/logger.ts` — structured logging via pino (writes to `gclaw.log`), configurable with `LOG_LEVEL` and `LOG_FILE`
 - `src/context.ts` — `AsyncLocalStorage`-based request context; assigns a UUID `requestId` per user request, auto-injected into all pino log lines
 - `src/metrics.ts` — in-memory metrics collection for tool/API call latency, success/failure rates; `withMetrics()` wrapper and `logMetricsSummary()` for periodic reporting
 - `src/config.ts` — centralized Zod-validated config from env vars, with defaults. Fails fast on missing required vars.

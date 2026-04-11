@@ -48,7 +48,7 @@ TOKEN_ENCRYPTION_KEY=<64-char hex string>
 # Optional (defaults shown)
 GOOGLE_AI_MODEL=gemini-3.1-pro-preview
 LOG_LEVEL=info
-LOG_FILE=winbox.log
+LOG_FILE=gclaw.log
 OAUTH_REDIRECT_URL=http://localhost:3000
 OAUTH_PORT=3000
 GMAIL_MAX_CONCURRENT=2
@@ -105,7 +105,7 @@ If Bun is available, you can compile a standalone binary:
 pnpm build
 ```
 
-This produces `bin/winbox`. Run it the same way, but ensure `.env` and `.tokens.json` are in the working directory.
+This produces `bin/gclaw`. Run it the same way, but ensure `.env` and `.tokens.json` are in the working directory.
 
 ## 6. Verify the Deployment
 
@@ -121,7 +121,7 @@ Check the following files for operational health:
 
 | File         | Purpose                                      |
 | ------------ | -------------------------------------------- |
-| `winbox.log` | Structured application logs (JSON, via pino) |
+| `gclaw.log` | Structured application logs (JSON, via pino) |
 | `audit.log`  | Audit trail for destructive email operations |
 
 ## Configuration Reference
@@ -141,7 +141,7 @@ Check the following files for operational health:
 | ------------------------- | ----------------------- | ------------------------------------------------- |
 | `OPENAI_MODEL`            | `gpt-5.4`               | OpenAI model name                                 |
 | `LOG_LEVEL`               | `info`                  | Pino log level (`debug`, `info`, `warn`, `error`) |
-| `LOG_FILE`                | `winbox.log`            | Path for the application log file                 |
+| `LOG_FILE`                | `gclaw.log`            | Path for the application log file                 |
 | `OAUTH_REDIRECT_URL`      | `http://localhost:3000` | OAuth redirect URI                                |
 | `OAUTH_PORT`              | `3000`                  | Port for the OAuth callback server                |
 | `GMAIL_MAX_CONCURRENT`    | `2`                     | Max concurrent Gmail API requests                 |
@@ -166,5 +166,5 @@ Check the following files for operational health:
 | Missing env var error at start | Check `.env` against the required variables list above                                                                                   |
 | `Too many concurrent requests` | Lower `*_MAX_CONCURRENT` values                                                                                                          |
 | 429 / 5xx from Google APIs     | Automatic retry (3 attempts, exponential backoff) handles transient failures. Check quota in Google Cloud Console for persistent errors. |
-| Empty responses from agents    | Check `winbox.log` for errors. Verify `OPENAI_API_KEY` is valid.                                                                         |
+| Empty responses from agents    | Check `gclaw.log` for errors. Verify `OPENAI_API_KEY` is valid.                                                                         |
 | `ECONNRESET` / `ETIMEDOUT`     | Transient network issue; retried automatically                                                                                           |

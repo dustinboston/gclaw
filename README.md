@@ -1,6 +1,8 @@
-# Winbox
+# G-Claw
 
-Winbox is an AI personal assistant built with Node.js, TypeScript, LangChain, LangGraph, and OpenAI. It manages your Gmail inbox, Google Calendar, and Google Tasks through a conversational interface using the Gemini LLM.
+![A G next to a lobster claw](./logo.png)
+
+G-Claw is an AI personal assistant built with Node.js, TypeScript, LangChain, LangGraph, and OpenAI. It manages your Gmail inbox, Google Calendar, and Google Tasks through a conversational interface using the Gemini LLM.
 
 ## Features
 
@@ -22,7 +24,7 @@ Winbox is an AI personal assistant built with Node.js, TypeScript, LangChain, La
   - `GOOGLE_CLIENT_SECRET`
   - `TOKEN_ENCRYPTION_KEY` — generate with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 
-Optional variables (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log`), `OPENAI_MODEL` (`gpt-5.4`), `OAUTH_REDIRECT_URL` (`http://localhost:3000`), `OAUTH_PORT` (`3000`), `GMAIL_MAX_CONCURRENT` (`2`), `DEFAULT_CALENDAR_ID` (`primary`), `DEFAULT_TASK_LIST_ID` (`@default`).
+Optional variables (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`gclaw.log`), `OPENAI_MODEL` (`gpt-5.4`), `OAUTH_REDIRECT_URL` (`http://localhost:3000`), `OAUTH_PORT` (`3000`), `GMAIL_MAX_CONCURRENT` (`2`), `DEFAULT_CALENDAR_ID` (`primary`), `DEFAULT_TASK_LIST_ID` (`@default`).
 
 ## Installation
 

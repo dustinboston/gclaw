@@ -49,8 +49,8 @@ const configSchema = z.object({
 	defaultCalendarId: z.string().default('primary'),
 	defaultTaskListId: z.string().default('@default'),
 	logLevel: z.string().default('info'),
-	logFile: z.string().default('winbox.log'),
-	databaseUrl: z.string().default('postgresql://winbox:winbox@localhost:5432/winbox'),
+	logFile: z.string().default('gclaw.log'),
+	databaseUrl: z.string().default('postgresql://gclaw:gclaw@localhost:5432/gclaw'),
 });
 
 /** Validated application configuration derived from environment variables. */

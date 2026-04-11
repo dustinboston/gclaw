@@ -4,5 +4,5 @@ node_modules
 coverage
 bin
 audit.log
-winbox.log
+gclaw.log
 .command_history

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Winbox is a multi-tier LangChain agent system that manages Gmail, Google Calendar, and Google Tasks through a conversational CLI. A supervisor agent receives natural language requests and delegates to specialized sub-agents, each with their own tools and system prompts.
+G-Claw is a multi-tier LangChain agent system that manages Gmail, Google Calendar, and Google Tasks through a conversational CLI. A supervisor agent receives natural language requests and delegates to specialized sub-agents, each with their own tools and system prompts.
 
 ```text
 User (stdin/stdout)
@@ -131,7 +131,7 @@ Request -> acquire() -> [execute] -> release()
 
 ### Logging
 
-Pino (`src/logger.ts`) writes structured JSON logs to `winbox.log` (configurable). Each log line includes the `requestId` from `AsyncLocalStorage` context, enabling correlation of all log entries for a single user request.
+Pino (`src/logger.ts`) writes structured JSON logs to `gclaw.log` (configurable). Each log line includes the `requestId` from `AsyncLocalStorage` context, enabling correlation of all log entries for a single user request.
 
 ### Audit Trail
 

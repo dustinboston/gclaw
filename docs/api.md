@@ -1,6 +1,6 @@
 # Tool API Reference
 
-Winbox exposes its functionality through LangChain tools organized into four domains: email cleanup, email management, calendar, and tasks. Each tool is a LangChain `tool()` with a Zod-validated schema.
+G-Claw exposes its functionality through LangChain tools organized into four domains: email cleanup, email management, calendar, and tasks. Each tool is a LangChain `tool()` with a Zod-validated schema.
 
 ## Supervisor Tools
 

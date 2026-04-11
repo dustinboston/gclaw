@@ -109,8 +109,8 @@ const rl = readline.createInterface({
 	historySize: 500,
 });
 
-logger.debug('Winbox started');
-console.log('Winbox — your personal assistant');
+logger.debug('G-Claw started');
+console.log('G-Claw — your personal assistant');
 console.log(`Session: ${currentThreadId.slice(0, 8)}...`);
 console.log('Commands: /new, /sessions, /resume <id>, /analytics, exit\n');
 
