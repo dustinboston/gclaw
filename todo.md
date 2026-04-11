@@ -57,9 +57,9 @@ Here's a comprehensive breakdown of what this codebase needs for enterprise read
 
 ### 8. Rate Limiting
 
-- Only Gmail has rate limiting (configurable via `GMAIL_MAX_CONCURRENT`)
-- Calendar and Tasks APIs have no rate limiting
-- ~~No backoff strategy~~ — `src/retry.ts` with exponential backoff and jitter
+- ~~Only Gmail has rate limiting (configurable via `GMAIL_MAX_CONCURRENT`)~~
+- ~~Calendar and Tasks APIs have no rate limiting~~
+- ~~No backoff strategy — `src/retry.ts` with exponential backoff and jitter~~
 
 ---
 

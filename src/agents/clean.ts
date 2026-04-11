@@ -1,17 +1,18 @@
-import { createAgent } from "langchain";
-import { model } from "../model.ts";
+import {createAgent} from 'langchain';
+import {model} from '../model.ts';
 import {
-  listEmail,
-  readEmail,
-  archiveEmail,
-  deleteEmail,
-  spamEmail,
-} from "../tools/gmail.ts";
-import { createTask } from "../tools/tasks.ts";
-import { listEvents, createEvent } from "../tools/calendar.ts";
+	listEmail,
+	readEmail,
+	archiveEmail,
+	deleteEmail,
+	spamEmail,
+} from '../tools/gmail.ts';
+import {createTask} from '../tools/tasks.ts';
+import {listEvents, createEvent} from '../tools/calendar.ts';
 
-const PLAN_PROMPT = `
-You are an email assistant that cleans up the user's inbox. Your job is to READ every email and PROPOSE an action plan. Do NOT execute any destructive actions (archive, delete, spam). Only use list_email and read_email.
+const planPrompt = `
+You are an email assistant that cleans up the user's inbox. Your job is to READ every email and PROPOSE \
+an action plan. Do NOT execute any destructive actions (archive, delete, spam). Only use list_email and read_email.
 
 # Workflow
 
@@ -56,8 +57,9 @@ Output the plan in this EXACT format (one line per email):
     Summary: <archive_count> archive, <delete_count> delete, <spam_count> spam, <keep_count> keep
 `;
 
-const EXECUTE_PROMPT = `
-You are an email assistant that cleans up the user's inbox. You MUST use tools to process every email. Do not skip emails. Do not ask for confirmation. The goal is to have an empty inbox.
+const executePrompt = `
+You are an email assistant that cleans up the user's inbox. You MUST use tools to process every email. \
+Do not skip emails. Do not ask for confirmation. The goal is to have an empty inbox.
 
 The user has already reviewed and approved a cleanup plan. Execute the plan exactly as specified.
 
@@ -75,8 +77,11 @@ Step 3: Based on the metadata, EXECUTE the appropriate action with the matching 
   - No tool call — only if the email should stay in the inbox (emails from real humans)
 Step 4: After ALL emails have been processed with tool calls, output the summary report.
 
-IMPORTANT: You must call a tool (archive_email, delete_email, spam_email, create_task, or create_event) for every email you process. The only exception is emails from real human people, which stay in the inbox. Do NOT just describe what you would do — actually call the tool.
-IMPORTANT: When calling archive_email, delete_email, or spam_email, always include the subject, from, and reason fields for the audit trail.
+IMPORTANT: You must call a tool (archive_email, delete_email, spam_email, create_task, or create_event) \
+for every email you process. The only exception is emails from real human people, which stay in the inbox. \
+Do NOT just describe what you would do — actually call the tool.
+IMPORTANT: When calling archive_email, delete_email, or spam_email, always include the subject, from, \
+and reason fields for the audit trail.
 
 # Decision Rules
 
@@ -128,20 +133,20 @@ Only output this AFTER you have processed every email with tool calls. Include o
 const planTools = [listEmail, readEmail];
 
 const executeTools = [
-  listEmail,
-  readEmail,
-  archiveEmail,
-  deleteEmail,
-  spamEmail,
-  createTask,
-  listEvents,
-  createEvent,
+	listEmail,
+	readEmail,
+	archiveEmail,
+	deleteEmail,
+	spamEmail,
+	createTask,
+	listEvents,
+	createEvent,
 ];
 
-export function createCleanAgent(mode: "plan" | "execute") {
-  return createAgent({
-    model,
-    tools: mode === "plan" ? planTools : executeTools,
-    systemPrompt: mode === "plan" ? PLAN_PROMPT : EXECUTE_PROMPT,
-  });
+export function createCleanAgent(mode: 'plan' | 'execute') {
+	return createAgent({
+		model,
+		tools: mode === 'plan' ? planTools : executeTools,
+		systemPrompt: mode === 'plan' ? planPrompt : executePrompt,
+	});
 }

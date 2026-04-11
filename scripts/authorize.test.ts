@@ -9,7 +9,7 @@ const { mockGetToken, mockSetCredentials, mockGenerateAuthUrl, mockOn } =
   }));
 
 const { mockServer } = vi.hoisted(() => ({
-  mockServer: { listen: vi.fn(), close: vi.fn() },
+  mockServer: { listen: vi.fn(), close: vi.fn(), _callback: undefined as any },
 }));
 
 vi.mock("dotenv/config", () => ({}));
@@ -73,7 +73,7 @@ vi.mock("node:http", () => ({
 
 await import("./authorize.ts");
 
-function serverCallback(): (req: any, res: any) => Promise<void> {
+function serverCallback(): (req: any, res: any) => void {
   return (mockServer as any)._callback;
 }
 
@@ -103,22 +103,24 @@ describe("authorize script", () => {
       end: vi.fn(),
     };
 
-    await serverCallback()({ url: "/?code=test_code" }, res);
+    serverCallback()({ url: "/?code=test_code" }, res);
+    await vi.waitFor(() => {
+      expect(mockSetCredentials).toHaveBeenCalledWith(tokens);
+    });
 
     expect(mockGetToken).toHaveBeenCalledWith("test_code");
-    expect(mockSetCredentials).toHaveBeenCalledWith(tokens);
     expect(res.writeHead).toHaveBeenCalledWith(200, {
       "Content-Type": "text/html",
     });
   });
 
-  it("handles missing code parameter", async () => {
+  it("handles missing code parameter", () => {
     const res = {
       writeHead: vi.fn().mockReturnThis(),
       end: vi.fn(),
     };
 
-    await serverCallback()({ url: "/" }, res);
+    serverCallback()({ url: "/" }, res);
     expect(res.writeHead).toHaveBeenCalledWith(400);
     expect(res.end).toHaveBeenCalledWith("Missing code parameter.");
   });
@@ -131,8 +133,10 @@ describe("authorize script", () => {
       end: vi.fn(),
     };
 
-    await serverCallback()({ url: "/?code=bad" }, res);
-    expect(res.writeHead).toHaveBeenCalledWith(500);
+    serverCallback()({ url: "/?code=bad" }, res);
+    await vi.waitFor(() => {
+      expect(res.writeHead).toHaveBeenCalledWith(500);
+    });
     expect(res.end).toHaveBeenCalledWith("Token exchange failed.");
   });
 

@@ -1,62 +1,86 @@
-import { logger } from "./logger.ts";
+import process from 'node:process';
+import {logger} from './logger.ts';
 
-export interface RetryOptions {
-  maxAttempts?: number;
-  baseDelayMs?: number;
-  maxDelayMs?: number;
-}
+export type RetryOptions = {
+	maxAttempts?: number;
+	baseDelayMs?: number;
+	maxDelayMs?: number;
+};
 
-const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+const retryableStatusCodes = new Set([408, 429, 500, 502, 503, 504]);
+
+type ErrorLike = {
+	code?: number;
+	status?: number;
+	statusCode?: number;
+	message?: string;
+};
 
 function isRetryable(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
+	if (typeof error !== 'object' || error === null) {
+		return false;
+	}
 
-  const status =
-    (error as any).code ?? (error as any).status ?? (error as any).statusCode;
+	const {code, status, statusCode} = error as ErrorLike;
+	const statusValue = code ?? status ?? statusCode;
 
-  if (typeof status === "number" && RETRYABLE_STATUS_CODES.has(status)) {
-    return true;
-  }
+	if (typeof statusValue === 'number' && retryableStatusCodes.has(statusValue)) {
+		return true;
+	}
 
-  const message = (error as any).message ?? "";
-  if (
-    typeof message === "string" &&
-    (message.includes("ECONNRESET") ||
-      message.includes("ETIMEDOUT") ||
-      message.includes("ENOTFOUND") ||
-      message.includes("socket hang up"))
-  ) {
-    return true;
-  }
+	const message = (error as ErrorLike).message ?? '';
+	if (
+		typeof message === 'string'
+		&& (message.includes('ECONNRESET')
+			|| message.includes('ETIMEDOUT')
+			|| message.includes('ENOTFOUND')
+			|| message.includes('socket hang up'))
+	) {
+		return true;
+	}
 
-  return false;
+	return false;
+}
+
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message;
+	}
+
+	return String(error);
 }
 
 export async function withRetry<T>(
-  fn: () => Promise<T>,
-  opts: RetryOptions = {},
+	fn: () => Promise<T>,
+	options: RetryOptions = {},
 ): Promise<T> {
-  const { maxAttempts = 3, baseDelayMs = 500, maxDelayMs = 10_000 } = opts;
+	const {maxAttempts = 3, baseDelayMs = 500, maxDelayMs = 10_000} = options;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (attempt === maxAttempts || !isRetryable(error)) {
-        throw error;
-      }
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		try {
+			// eslint-disable-next-line no-await-in-loop
+			return await fn();
+		} catch (error) {
+			if (attempt === maxAttempts || !isRetryable(error)) {
+				throw error;
+			}
 
-      const jitter = Math.random() * 0.5 + 0.75; // 0.75–1.25
-      const delay = Math.min(baseDelayMs * 2 ** (attempt - 1) * jitter, maxDelayMs);
+			const jitter = (Math.random() * 0.5) + 0.75; // 0.75–1.25
+			const delay = Math.min((baseDelayMs * (2 ** (attempt - 1))) * jitter, maxDelayMs);
 
-      logger.warn(
-        { attempt, maxAttempts, delayMs: Math.round(delay), error: (error as Error).message },
-        "Retrying after transient error",
-      );
+			logger.warn(
+				{
+					attempt, maxAttempts, delayMs: Math.round(delay), error: getErrorMessage(error),
+				},
+				'Retrying after transient error',
+			);
 
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
+			// eslint-disable-next-line no-await-in-loop
+			await new Promise<void>(resolve => {
+				setTimeout(resolve, delay);
+			});
+		}
+	}
 
-  throw new Error("Unreachable");
+	throw new Error('Unreachable');
 }

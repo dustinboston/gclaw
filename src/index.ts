@@ -1,19 +1,20 @@
 // Create the supervisor agent
 // ----------------------------------------------------------------------------
 
-import "dotenv/config";
-import * as readline from "node:readline/promises";
-import { MemorySaver } from "@langchain/langgraph";
-import { createAgent, HumanMessage, AIMessageChunk } from "langchain";
-import { cleanEmail } from "./tools/clean.ts";
-import { manageEmail } from "./tools/gmail.ts";
-import { manageCalendar } from "./tools/calendar.ts";
-import { manageTasks } from "./tools/tasks.ts";
-import { model } from "./model.ts";
-import { loadAgentsFile } from "./agents-file.ts";
-import { logger } from "./logger.ts";
-import { runWithContext } from "./context.ts";
-import { logMetricsSummary } from "./metrics.ts";
+import * as readline from 'node:readline/promises';
+import process from 'node:process';
+import 'dotenv/config'; // eslint-disable-line import-x/no-unassigned-import
+import {MemorySaver} from '@langchain/langgraph';
+import {createAgent, HumanMessage, AIMessageChunk} from 'langchain';
+import {cleanEmail} from './tools/clean.ts';
+import {manageEmail} from './tools/gmail.ts';
+import {manageCalendar} from './tools/calendar.ts';
+import {manageTasks} from './tools/tasks.ts';
+import {model} from './model.ts';
+import {loadAgentsFile} from './agents-file.ts';
+import {logger} from './logger.ts';
+import {runWithContext} from './context.ts';
+import {logMetricsSummary} from './metrics.ts';
 
 // Setup
 // ----------------------------------------------------------------------------
@@ -44,62 +45,70 @@ ${agentsFile}
 `.trim();
 
 const supervisorAgent = createAgent({
-  model,
-  tools: [cleanEmail, manageCalendar, manageTasks, manageEmail],
-  systemPrompt: supervisorPrompt,
-  checkpointer: new MemorySaver(),
+	model,
+	tools: [cleanEmail, manageCalendar, manageTasks, manageEmail],
+	systemPrompt: supervisorPrompt,
+	checkpointer: new MemorySaver(),
 });
 
 // Interactive loop
 // ----------------------------------------------------------------------------
 
-const config = { configurable: { thread_id: "666" } };
+const config = {configurable: {thread_id: '666'}}; // eslint-disable-line @typescript-eslint/naming-convention
 
 const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
+	input: process.stdin,
+	output: process.stdout,
 });
 
-logger.debug("Winbox started");
-console.log("Winbox — your personal assistant");
+logger.debug('Winbox started');
+console.log('Winbox — your personal assistant');
 console.log('Type "exit" to quit.\n');
 
 while (true) {
-  let input: string;
-  try {
-    input = await rl.question("> ");
-  } catch {
-    break;
-  }
+	let input: string;
+	try {
+		// eslint-disable-next-line no-await-in-loop
+		input = await rl.question('> ');
+	} catch {
+		break;
+	}
 
-  const trimmed = input.trim();
+	const trimmed = input.trim();
 
-  if (!trimmed) continue;
-  if (trimmed.toLowerCase() === "exit") break;
+	if (!trimmed) {
+		continue;
+	}
 
-  await runWithContext(async () => {
-    try {
-      logger.info({ input: trimmed }, "User request");
+	if (trimmed.toLowerCase() === 'exit') {
+		break;
+	}
 
-      const stream = await supervisorAgent.stream(
-        { messages: [new HumanMessage(trimmed)] },
-        { ...config, streamMode: "messages" },
-      );
+	// eslint-disable-next-line no-await-in-loop
+	await runWithContext(async () => {
+		try {
+			logger.info({input: trimmed}, 'User request');
 
-      for await (const [message] of stream) {
-        if (message instanceof AIMessageChunk && message.text) {
-          process.stdout.write(message.text);
-        }
-      }
+			const stream = await supervisorAgent.stream(
+				{messages: [new HumanMessage(trimmed)]},
+				{...config, streamMode: 'messages'},
+			);
 
-      process.stdout.write("\n\n");
-    } catch (error) {
-      logger.error({ err: error }, "Agent error");
-      console.error(`\nError: ${(error as Error).message}\n`);
-    } finally {
-      logMetricsSummary();
-    }
-  });
+			for await (const [message] of stream) {
+				if (message instanceof AIMessageChunk && message.text) {
+					process.stdout.write(message.text);
+				}
+			}
+
+			process.stdout.write('\n\n');
+		} catch (error) {
+			logger.error({err: error}, 'Agent error');
+			const message = error instanceof Error ? error.message : String(error);
+			console.error(`\nError: ${message}\n`);
+		} finally {
+			logMetricsSummary();
+		}
+	});
 }
 
 rl.close();

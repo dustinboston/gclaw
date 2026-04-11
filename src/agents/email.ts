@@ -1,15 +1,15 @@
-import { createAgent } from "langchain";
-import { model } from "../model.ts";
+import {createAgent} from 'langchain';
+import {model} from '../model.ts';
 import {
-  listEmail,
-  readEmail,
-  archiveEmail,
-  deleteEmail,
-  spamEmail,
-  unarchiveEmail,
-  undeleteEmail,
-  unspamEmail,
-} from "../tools/gmail.ts";
+	listEmail,
+	readEmail,
+	archiveEmail,
+	deleteEmail,
+	spamEmail,
+	unarchiveEmail,
+	undeleteEmail,
+	unspamEmail,
+} from '../tools/gmail.ts';
 
 const emailSystemPrompt = `
 You are a Gmail assistant that helps the user manage their inbox. You MUST use tools to fulfill every request. Do not ask for confirmation.
@@ -49,7 +49,7 @@ You are a Gmail assistant that helps the user manage their inbox. You MUST use t
 `;
 
 export const emailAgent = createAgent({
-  model,
-  tools: [listEmail, readEmail, archiveEmail, deleteEmail, spamEmail, unarchiveEmail, undeleteEmail, unspamEmail],
-  systemPrompt: emailSystemPrompt,
+	model,
+	tools: [listEmail, readEmail, archiveEmail, deleteEmail, spamEmail, unarchiveEmail, undeleteEmail, unspamEmail],
+	systemPrompt: emailSystemPrompt,
 });

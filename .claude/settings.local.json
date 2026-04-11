@@ -8,7 +8,8 @@
       "Bash(pnpm typecheck:*)",
       "Bash(TOKEN_ENCRYPTION_KEY=\"\" OPENAI_API_KEY=x GOOGLE_CLIENT_ID=x GOOGLE_CLIENT_SECRET=x node --env-file=.env -e \"import\\('./src/config.ts'\\).then\\(m => m.loadConfig\\(\\)\\)\")",
       "Bash(echo \"exit: $?\")",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(npx xo:*)"
     ]
   }
 }

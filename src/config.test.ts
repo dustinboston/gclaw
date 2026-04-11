@@ -10,16 +10,9 @@ const VALID_ENV = {
 
 describe("loadConfig", () => {
   const originalEnv = { ...process.env };
-  let mockExit: ReturnType<typeof vi.spyOn>;
-  let mockStderr: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
     resetConfig();
     Object.assign(process.env, VALID_ENV);
-    mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
-      throw new Error("process.exit called");
-    });
-    mockStderr = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -31,8 +24,6 @@ describe("loadConfig", () => {
       }
     }
     resetConfig();
-    mockExit.mockRestore();
-    mockStderr.mockRestore();
   });
 
   it("loads config with all required env vars", () => {
@@ -54,36 +45,24 @@ describe("loadConfig", () => {
     expect(config.logLevel).toBe("info");
   });
 
-  it("exits with message when OPENAI_API_KEY is missing", () => {
+  it("throws when OPENAI_API_KEY is missing", () => {
     delete process.env.OPENAI_API_KEY;
-    expect(() => loadConfig()).toThrow("process.exit called");
-    expect(mockStderr).toHaveBeenCalledWith(
-      expect.stringContaining("OPENAI_API_KEY"),
-    );
+    expect(() => loadConfig()).toThrow("OPENAI_API_KEY");
   });
 
-  it("exits with message when GOOGLE_CLIENT_ID is missing", () => {
+  it("throws when GOOGLE_CLIENT_ID is missing", () => {
     delete process.env.GOOGLE_CLIENT_ID;
-    expect(() => loadConfig()).toThrow("process.exit called");
-    expect(mockStderr).toHaveBeenCalledWith(
-      expect.stringContaining("GOOGLE_CLIENT_ID"),
-    );
+    expect(() => loadConfig()).toThrow("GOOGLE_CLIENT_ID");
   });
 
-  it("exits with message when GOOGLE_CLIENT_SECRET is missing", () => {
+  it("throws when GOOGLE_CLIENT_SECRET is missing", () => {
     delete process.env.GOOGLE_CLIENT_SECRET;
-    expect(() => loadConfig()).toThrow("process.exit called");
-    expect(mockStderr).toHaveBeenCalledWith(
-      expect.stringContaining("GOOGLE_CLIENT_SECRET"),
-    );
+    expect(() => loadConfig()).toThrow("GOOGLE_CLIENT_SECRET");
   });
 
-  it("exits with message when TOKEN_ENCRYPTION_KEY is missing", () => {
+  it("throws when TOKEN_ENCRYPTION_KEY is missing", () => {
     delete process.env.TOKEN_ENCRYPTION_KEY;
-    expect(() => loadConfig()).toThrow("process.exit called");
-    expect(mockStderr).toHaveBeenCalledWith(
-      expect.stringContaining("TOKEN_ENCRYPTION_KEY"),
-    );
+    expect(() => loadConfig()).toThrow("TOKEN_ENCRYPTION_KEY");
   });
 
   it("caches the config after first load", () => {

@@ -1,6 +1,6 @@
-import { createAgent } from "langchain";
-import { model } from "../model.ts";
-import { listEvents, createEvent } from "../tools/calendar.ts";
+import {createAgent} from 'langchain';
+import {model} from '../model.ts';
+import {listEvents, createEvent} from '../tools/calendar.ts';
 
 const calendarSystemPrompt = `
 You are a calendar assistant that helps manage the user's Google Calendar. You MUST use tools to fulfill every request. Do not ask for confirmation.
@@ -42,7 +42,7 @@ For creating events:
 `;
 
 export const calendarAgent = createAgent({
-  model,
-  tools: [listEvents, createEvent],
-  systemPrompt: calendarSystemPrompt,
+	model,
+	tools: [listEvents, createEvent],
+	systemPrompt: calendarSystemPrompt,
 });

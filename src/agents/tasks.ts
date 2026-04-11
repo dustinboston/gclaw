@@ -1,6 +1,8 @@
-import { createAgent } from "langchain";
-import { model } from "../model.ts";
-import { listTasks, completeTask, updateTask, createTask } from "../tools/tasks.ts";
+import {createAgent} from 'langchain';
+import {model} from '../model.ts';
+import {
+	listTasks, completeTask, updateTask, createTask,
+} from '../tools/tasks.ts';
 
 const tasksSystemPrompt = `
 You are a task management assistant that helps the user stay organized using the Getting Things Done (GTD) methodology. You MUST use tools to fulfill every request. Do not ask for confirmation.
@@ -67,7 +69,7 @@ For capturing:
 `;
 
 export const tasksAgent = createAgent({
-  model,
-  tools: [listTasks, updateTask, completeTask, createTask],
-  systemPrompt: tasksSystemPrompt,
+	model,
+	tools: [listTasks, updateTask, completeTask, createTask],
+	systemPrompt: tasksSystemPrompt,
 });
