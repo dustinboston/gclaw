@@ -1,9 +1,11 @@
 {
   "name": "winbox",
   "version": "1.0.0",
+  "private": true,
+  "license": "CC-BY-4.0",
   "description": "",
   "type": "module",
-  "main": "index.js",
+  "main": "src/index.ts",
   "scripts": {
     "authorize": "node --env-file=.env scripts/authorize.ts",
     "start": "node --env-file=.env src/index.ts",
@@ -20,7 +22,6 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
   "packageManager": "pnpm@10.15.1",
   "dependencies": {
     "@langchain/google-genai": "^2.1.26",

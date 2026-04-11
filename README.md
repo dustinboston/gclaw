@@ -52,3 +52,7 @@ pnpm start
 pnpm test             # Run tests
 pnpm typecheck        # Type-check without emitting
 ```
+
+## License
+
+This project is licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). You may share and adapt this work for non-commercial purposes with attribution.
