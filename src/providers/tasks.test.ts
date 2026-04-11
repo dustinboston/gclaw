@@ -42,13 +42,26 @@ vi.mock("../config.ts", () => ({
     googleClientSecret: "test-secret",
     oauthRedirectUrl: "http://localhost:3000",
     gmailMaxConcurrent: 2,
+    tasksMaxConcurrent: 2,
+    tokenEncryptionKey: "test-key",
   }),
 }));
 
-import { tasks } from "./tasks.ts";
+import { tasks, tasksRequest } from "./tasks.ts";
 
 describe("tasks provider", () => {
   it("exports a tasks client", () => {
     expect(tasks).toBe(mockTasks);
+  });
+
+  it("exports tasksRequest that executes the function", async () => {
+    const result = await tasksRequest(() => Promise.resolve("data"));
+    expect(result).toBe("data");
+  });
+
+  it("tasksRequest propagates errors", async () => {
+    await expect(
+      tasksRequest(() => Promise.reject(new Error("fail"))),
+    ).rejects.toThrow("fail");
   });
 });

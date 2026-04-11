@@ -22,6 +22,7 @@ vi.mock("../providers/tasks.ts", () => ({
       insert: mockTasksInsert,
     },
   },
+  tasksRequest: (fn: () => Promise<unknown>) => fn(),
 }));
 
 vi.mock("../config.ts", () => ({

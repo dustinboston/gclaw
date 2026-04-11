@@ -20,7 +20,7 @@ pnpm typecheck        # Type-check without emitting
 
 Requires a `.env` file with: `OPENAI_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`. Google OAuth tokens are stored encrypted in `.tokens.json` (created by `pnpm authorize`). Generate an encryption key with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. If you get `invalid_grant`, re-run `pnpm authorize`.
 
-Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log`), `OPENAI_MODEL` (`gpt-5.4`), `OAUTH_REDIRECT_URL` (`http://localhost:3000`), `OAUTH_PORT` (`3000`), `GMAIL_MAX_CONCURRENT` (`2`), `DEFAULT_CALENDAR_ID` (`primary`), `DEFAULT_TASK_LIST_ID` (`@default`). All config is validated at startup via Zod in `src/config.ts`.
+Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log`), `OPENAI_MODEL` (`gpt-5.4`), `OAUTH_REDIRECT_URL` (`http://localhost:3000`), `OAUTH_PORT` (`3000`), `GMAIL_MAX_CONCURRENT` (`2`), `CALENDAR_MAX_CONCURRENT` (`2`), `TASKS_MAX_CONCURRENT` (`2`), `DEFAULT_CALENDAR_ID` (`primary`), `DEFAULT_TASK_LIST_ID` (`@default`). All config is validated at startup via Zod in `src/config.ts`.
 
 ## Architecture
 
@@ -50,8 +50,8 @@ Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log
 - `src/config.ts` — centralized Zod-validated config from env vars, with defaults. Fails fast on missing required vars.
 - `src/model.ts` — shared OpenAI model instance used by both agents
 - `src/tools/` — each file exports LangChain tools wrapping Google API calls (Gmail, Calendar, Tasks)
-- `src/providers/calendar.ts` — Google Calendar API client with rate limiting
-- `src/providers/tasks.ts` — Google Tasks API client with rate limiting
+- `src/providers/calendar.ts` — Google Calendar API client with concurrency-limited rate limiter, retry logic, and metrics; exports `calendarRequest()` wrapper
+- `src/providers/tasks.ts` — Google Tasks API client with concurrency-limited rate limiter, retry logic, and metrics; exports `tasksRequest()` wrapper
 - `src/agents-file.ts` — loads an agent instruction file (AGENTS.md, CLAUDE.md, etc.) from the project root and injects it into the email agent's system prompt at runtime. Not cached, so edits are picked up without restart.
 - `scripts/authorize.ts` — one-time OAuth2 authorization flow (local HTTP server on port 3000)
 

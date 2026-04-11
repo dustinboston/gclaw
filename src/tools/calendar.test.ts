@@ -17,6 +17,7 @@ vi.mock("../providers/calendar.ts", () => ({
     calendarList: { list: mockCalendarListList },
     events: { list: mockEventsList, insert: mockEventsInsert },
   },
+  calendarRequest: (fn: () => Promise<unknown>) => fn(),
 }));
 
 vi.mock("../config.ts", () => ({

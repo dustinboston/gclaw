@@ -9,6 +9,8 @@ const ENV_VAR_NAMES: Record<string, string> = {
   oauthPort: "OAUTH_PORT",
   tokenEncryptionKey: "TOKEN_ENCRYPTION_KEY",
   gmailMaxConcurrent: "GMAIL_MAX_CONCURRENT",
+  calendarMaxConcurrent: "CALENDAR_MAX_CONCURRENT",
+  tasksMaxConcurrent: "TASKS_MAX_CONCURRENT",
   defaultCalendarId: "DEFAULT_CALENDAR_ID",
   defaultTaskListId: "DEFAULT_TASK_LIST_ID",
   logLevel: "LOG_LEVEL",
@@ -31,6 +33,8 @@ const configSchema = z.object({
 
   // Runtime
   gmailMaxConcurrent: z.coerce.number().default(2),
+  calendarMaxConcurrent: z.coerce.number().default(2),
+  tasksMaxConcurrent: z.coerce.number().default(2),
   defaultCalendarId: z.string().default("primary"),
   defaultTaskListId: z.string().default("@default"),
   logLevel: z.string().default("info"),
@@ -53,6 +57,8 @@ export function loadConfig(): Config {
     oauthPort: process.env.OAUTH_PORT,
     tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY,
     gmailMaxConcurrent: process.env.GMAIL_MAX_CONCURRENT,
+    calendarMaxConcurrent: process.env.CALENDAR_MAX_CONCURRENT,
+    tasksMaxConcurrent: process.env.TASKS_MAX_CONCURRENT,
     defaultCalendarId: process.env.DEFAULT_CALENDAR_ID,
     defaultTaskListId: process.env.DEFAULT_TASK_LIST_ID,
     logLevel: process.env.LOG_LEVEL,

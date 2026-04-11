@@ -42,13 +42,26 @@ vi.mock("../config.ts", () => ({
     googleClientSecret: "test-secret",
     oauthRedirectUrl: "http://localhost:3000",
     gmailMaxConcurrent: 2,
+    calendarMaxConcurrent: 2,
+    tokenEncryptionKey: "test-key",
   }),
 }));
 
-import { calendar } from "./calendar.ts";
+import { calendar, calendarRequest } from "./calendar.ts";
 
 describe("calendar provider", () => {
   it("exports a calendar client", () => {
     expect(calendar).toBe(mockCalendar);
+  });
+
+  it("exports calendarRequest that executes the function", async () => {
+    const result = await calendarRequest(() => Promise.resolve("data"));
+    expect(result).toBe("data");
+  });
+
+  it("calendarRequest propagates errors", async () => {
+    await expect(
+      calendarRequest(() => Promise.reject(new Error("fail"))),
+    ).rejects.toThrow("fail");
   });
 });
