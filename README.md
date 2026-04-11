@@ -1,6 +1,6 @@
 # G-Claw
 
-![A G next to a lobster claw](./logo.png)
+![The Google "G" next to a lobster claw](./logo.png)
 
 G-Claw is an AI personal assistant built with Node.js, TypeScript, LangChain, LangGraph, and OpenAI. It manages your Gmail inbox, Google Calendar, and Google Tasks through a conversational interface using the Gemini LLM.
 
