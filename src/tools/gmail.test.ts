@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 
-const { mockStream, mockList, mockGet, mockModify, mockTrash } = vi.hoisted(() => ({
+const { mockStream, mockList, mockGet, mockModify, mockTrash, mockUntrash } = vi.hoisted(() => ({
   mockStream: vi.fn(),
   mockList: vi.fn(),
   mockGet: vi.fn(),
   mockModify: vi.fn().mockResolvedValue({}),
   mockTrash: vi.fn().mockResolvedValue({}),
+  mockUntrash: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("../agents/email.ts", () => ({
@@ -20,6 +21,7 @@ vi.mock("../providers/gmail.ts", () => ({
         get: mockGet,
         modify: mockModify,
         trash: mockTrash,
+        untrash: mockUntrash,
       },
     },
   },
@@ -50,6 +52,9 @@ import {
   archiveEmail,
   deleteEmail,
   spamEmail,
+  unarchiveEmail,
+  undeleteEmail,
+  unspamEmail,
 } from "./gmail.ts";
 import { AIMessageChunk, HumanMessage } from "langchain";
 
@@ -189,30 +194,63 @@ describe("readEmail", () => {
 });
 
 describe("archiveEmail", () => {
-  it("removes INBOX label and logs audit", async () => {
-    const result = await archiveEmail.invoke({ id: "msg1" });
+  it("removes INBOX label and logs audit with metadata", async () => {
+    const result = await archiveEmail.invoke({
+      id: "msg1",
+      subject: "Newsletter",
+      from: "news@example.com",
+      reason: "Newsletter — no reference value",
+    });
     expect(mockModify).toHaveBeenCalledWith({
       userId: "me",
       id: "msg1",
       requestBody: { removeLabelIds: ["INBOX"] },
     });
     expect(result).toBe("Email msg1 archived successfully.");
-    expect(mockLogAudit).toHaveBeenCalledWith("archive", "msg1", "success");
+    expect(mockLogAudit).toHaveBeenCalledWith("archive", "msg1", "success", {
+      subject: "Newsletter",
+      from: "news@example.com",
+      reason: "Newsletter — no reference value",
+    });
+  });
+
+  it("works without optional metadata", async () => {
+    const result = await archiveEmail.invoke({ id: "msg2" });
+    expect(result).toBe("Email msg2 archived successfully.");
+    expect(mockLogAudit).toHaveBeenCalledWith("archive", "msg2", "success", {
+      subject: undefined,
+      from: undefined,
+      reason: undefined,
+    });
   });
 });
 
 describe("deleteEmail", () => {
-  it("moves message to trash and logs audit", async () => {
-    const result = await deleteEmail.invoke({ id: "msg1" });
+  it("moves message to trash and logs audit with metadata", async () => {
+    const result = await deleteEmail.invoke({
+      id: "msg1",
+      subject: "Sale!",
+      from: "promo@shop.com",
+      reason: "Promotion",
+    });
     expect(mockTrash).toHaveBeenCalledWith({ userId: "me", id: "msg1" });
     expect(result).toBe("Email msg1 deleted successfully.");
-    expect(mockLogAudit).toHaveBeenCalledWith("delete", "msg1", "success");
+    expect(mockLogAudit).toHaveBeenCalledWith("delete", "msg1", "success", {
+      subject: "Sale!",
+      from: "promo@shop.com",
+      reason: "Promotion",
+    });
   });
 });
 
 describe("spamEmail", () => {
-  it("adds SPAM label and removes INBOX label and logs audit", async () => {
-    const result = await spamEmail.invoke({ id: "msg1" });
+  it("adds SPAM label and removes INBOX label and logs audit with metadata", async () => {
+    const result = await spamEmail.invoke({
+      id: "msg1",
+      subject: "You won!",
+      from: "scam@bad.com",
+      reason: "Phishing attempt",
+    });
     expect(mockModify).toHaveBeenCalledWith({
       userId: "me",
       id: "msg1",
@@ -222,6 +260,48 @@ describe("spamEmail", () => {
       },
     });
     expect(result).toBe("Email msg1 marked as spam successfully.");
-    expect(mockLogAudit).toHaveBeenCalledWith("spam", "msg1", "success");
+    expect(mockLogAudit).toHaveBeenCalledWith("spam", "msg1", "success", {
+      subject: "You won!",
+      from: "scam@bad.com",
+      reason: "Phishing attempt",
+    });
+  });
+});
+
+describe("unarchiveEmail", () => {
+  it("adds INBOX label back and logs audit", async () => {
+    const result = await unarchiveEmail.invoke({ id: "msg1" });
+    expect(mockModify).toHaveBeenCalledWith({
+      userId: "me",
+      id: "msg1",
+      requestBody: { addLabelIds: ["INBOX"] },
+    });
+    expect(result).toBe("Email msg1 moved back to inbox.");
+    expect(mockLogAudit).toHaveBeenCalledWith("unarchive", "msg1", "success");
+  });
+});
+
+describe("undeleteEmail", () => {
+  it("restores message from trash and logs audit", async () => {
+    const result = await undeleteEmail.invoke({ id: "msg1" });
+    expect(mockUntrash).toHaveBeenCalledWith({ userId: "me", id: "msg1" });
+    expect(result).toBe("Email msg1 restored from trash.");
+    expect(mockLogAudit).toHaveBeenCalledWith("undelete", "msg1", "success");
+  });
+});
+
+describe("unspamEmail", () => {
+  it("removes SPAM label and adds INBOX label and logs audit", async () => {
+    const result = await unspamEmail.invoke({ id: "msg1" });
+    expect(mockModify).toHaveBeenCalledWith({
+      userId: "me",
+      id: "msg1",
+      requestBody: {
+        removeLabelIds: ["SPAM"],
+        addLabelIds: ["INBOX"],
+      },
+    });
+    expect(result).toBe("Email msg1 unmarked as spam and moved back to inbox.");
+    expect(mockLogAudit).toHaveBeenCalledWith("unspam", "msg1", "success");
   });
 });

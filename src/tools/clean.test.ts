@@ -1,9 +1,14 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockStream } = vi.hoisted(() => ({ mockStream: vi.fn() }));
+const { mockPlanStream, mockExecuteStream } = vi.hoisted(() => ({
+  mockPlanStream: vi.fn(),
+  mockExecuteStream: vi.fn(),
+}));
 
 vi.mock("../agents/clean.ts", () => ({
-  cleanAgent: { stream: mockStream },
+  createCleanAgent: vi.fn((mode: string) => ({
+    stream: mode === "plan" ? mockPlanStream : mockExecuteStream,
+  })),
 }));
 
 vi.mock("../logger.ts", () => ({
@@ -15,56 +20,80 @@ vi.mock("../logger.ts", () => ({
   },
 }));
 
+// Mock readline for confirmation
+const { mockQuestion, mockClose } = vi.hoisted(() => ({
+  mockQuestion: vi.fn(),
+  mockClose: vi.fn(),
+}));
+
+vi.mock("node:readline/promises", () => ({
+  createInterface: vi.fn(() => ({
+    question: mockQuestion,
+    close: mockClose,
+  })),
+}));
+
 import { cleanEmail } from "./clean.ts";
 import { AIMessageChunk, HumanMessage } from "langchain";
 
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 describe("cleanEmail", () => {
-  it("streams from the email agent and returns completion message", async () => {
-    mockStream.mockReturnValue(
+  it("proposes a plan, confirms, then executes", async () => {
+    mockPlanStream.mockReturnValue(
       (async function* () {
-        yield [new AIMessageChunk({ content: "Cleaned 5 emails" })];
+        yield [new AIMessageChunk({ content: "=== Proposed Plan ===\n- [Delete] \"Newsletter\" from news@co.com — newsletter" })];
       })(),
     );
+    mockQuestion.mockResolvedValue("yes");
+    mockExecuteStream.mockReturnValue(
+      (async function* () {
+        yield [new AIMessageChunk({ content: "Deleted: 1" })];
+      })(),
+    );
+
     const result = await cleanEmail.invoke({ request: "clean my inbox" });
-    expect(mockStream).toHaveBeenCalledWith(
-      { messages: [expect.any(HumanMessage)] },
-      { recursionLimit: 150, streamMode: "messages" },
-    );
-    expect(result).toBe(
-      "Email cleanup complete. Results already displayed to user.",
-    );
+    expect(mockPlanStream).toHaveBeenCalled();
+    expect(mockQuestion).toHaveBeenCalledWith("Execute this plan? (yes/no): ");
+    expect(mockExecuteStream).toHaveBeenCalled();
+    expect(result).toBe("Email cleanup complete. Results already displayed to user.");
   });
 
-  it("skips non-AIMessageChunk messages", async () => {
-    mockStream.mockReturnValue(
+  it("cancels when user rejects the plan", async () => {
+    mockPlanStream.mockReturnValue(
       (async function* () {
-        yield [{ text: "not an AIMessageChunk" }];
-        yield [new AIMessageChunk({ content: "real" })];
+        yield [new AIMessageChunk({ content: "=== Proposed Plan ===\n- [Delete] \"Spam\" from bad@co.com" })];
       })(),
     );
-    const result = await cleanEmail.invoke({ request: "clean" });
-    expect(result).toBe(
-      "Email cleanup complete. Results already displayed to user.",
-    );
+    mockQuestion.mockResolvedValue("no");
+
+    const result = await cleanEmail.invoke({ request: "clean my inbox" });
+    expect(mockPlanStream).toHaveBeenCalled();
+    expect(mockExecuteStream).not.toHaveBeenCalled();
+    expect(result).toBe("Email cleanup cancelled by user.");
   });
 
-  it("handles AIMessageChunk with empty text", async () => {
-    mockStream.mockReturnValue(
+  it("returns early when plan is empty", async () => {
+    mockPlanStream.mockReturnValue(
       (async function* () {
         yield [new AIMessageChunk({ content: "" })];
       })(),
     );
+
     const result = await cleanEmail.invoke({ request: "clean" });
-    expect(result).toBe(
-      "Email cleanup complete. Results already displayed to user.",
-    );
+    expect(result).toBe("No emails to process.");
+    expect(mockQuestion).not.toHaveBeenCalled();
+    expect(mockExecuteStream).not.toHaveBeenCalled();
   });
 
-  it("handles empty stream", async () => {
-    mockStream.mockReturnValue((async function* () {})());
+  it("handles errors gracefully", async () => {
+    mockPlanStream.mockImplementation(() => {
+      throw new Error("API down");
+    });
+
     const result = await cleanEmail.invoke({ request: "clean" });
-    expect(result).toBe(
-      "Email cleanup complete. Results already displayed to user.",
-    );
+    expect(result).toBe("Email cleanup failed: API down");
   });
 });

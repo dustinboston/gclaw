@@ -1,7 +1,7 @@
 import { HumanMessage, tool, AIMessageChunk } from "langchain";
 import z from "zod";
 import { gmail, gmailRequest } from "../providers/gmail.ts";
-import { logAudit } from "../audit.ts";
+import { logAudit, type AuditMetadata } from "../audit.ts";
 import { logger } from "../logger.ts";
 
 export const manageEmail = tool(
@@ -109,7 +109,8 @@ export const readEmail = tool(
 );
 
 export const archiveEmail = tool(
-  async ({ id }) => {
+  async ({ id, subject, from, reason }) => {
+    const meta: AuditMetadata = { subject, from, reason };
     try {
       await gmailRequest(() =>
         gmail.users.messages.modify({
@@ -120,7 +121,7 @@ export const archiveEmail = tool(
           },
         }),
       );
-      logAudit("archive", id, "success");
+      logAudit("archive", id, "success", meta);
       return `Email ${id} archived successfully.`;
     } catch (error) {
       logAudit("archive", id, "failure", (error as Error).message);
@@ -129,15 +130,19 @@ export const archiveEmail = tool(
   },
   {
     name: "archive_email",
-    description: "Archive an email via the Gmail API. Requires an ID.",
+    description: "Archive an email via the Gmail API. Requires an ID. Include subject, from, and reason for audit trail.",
     schema: z.object({
       id: z.string().describe("The message ID from list_email or read_email"),
+      subject: z.string().optional().describe("The email subject (for audit trail)"),
+      from: z.string().optional().describe("The email sender (for audit trail)"),
+      reason: z.string().optional().describe("Why this action was taken (for audit trail)"),
     }),
   },
 );
 
 export const deleteEmail = tool(
-  async ({ id }) => {
+  async ({ id, subject, from, reason }) => {
+    const meta: AuditMetadata = { subject, from, reason };
     try {
       await gmailRequest(() =>
         gmail.users.messages.trash({
@@ -145,7 +150,7 @@ export const deleteEmail = tool(
           id,
         }),
       );
-      logAudit("delete", id, "success");
+      logAudit("delete", id, "success", meta);
       return `Email ${id} deleted successfully.`;
     } catch (error) {
       logAudit("delete", id, "failure", (error as Error).message);
@@ -154,15 +159,19 @@ export const deleteEmail = tool(
   },
   {
     name: "delete_email",
-    description: "Delete an email via the Gmail API. Requires an ID.",
+    description: "Delete an email via the Gmail API. Requires an ID. Include subject, from, and reason for audit trail.",
     schema: z.object({
       id: z.string().describe("The message ID from list_email or read_email"),
+      subject: z.string().optional().describe("The email subject (for audit trail)"),
+      from: z.string().optional().describe("The email sender (for audit trail)"),
+      reason: z.string().optional().describe("Why this action was taken (for audit trail)"),
     }),
   },
 );
 
 export const spamEmail = tool(
-  async ({ id }) => {
+  async ({ id, subject, from, reason }) => {
+    const meta: AuditMetadata = { subject, from, reason };
     try {
       await gmailRequest(() =>
         gmail.users.messages.modify({
@@ -174,7 +183,7 @@ export const spamEmail = tool(
           },
         }),
       );
-      logAudit("spam", id, "success");
+      logAudit("spam", id, "success", meta);
       return `Email ${id} marked as spam successfully.`;
     } catch (error) {
       logAudit("spam", id, "failure", (error as Error).message);
@@ -183,9 +192,94 @@ export const spamEmail = tool(
   },
   {
     name: "spam_email",
-    description: "Mark an email as spam via the Gmail API. Requires an ID.",
+    description: "Mark an email as spam via the Gmail API. Requires an ID. Include subject, from, and reason for audit trail.",
     schema: z.object({
       id: z.string().describe("The message ID from list_email or read_email"),
+      subject: z.string().optional().describe("The email subject (for audit trail)"),
+      from: z.string().optional().describe("The email sender (for audit trail)"),
+      reason: z.string().optional().describe("Why this action was taken (for audit trail)"),
+    }),
+  },
+);
+
+export const unarchiveEmail = tool(
+  async ({ id }) => {
+    try {
+      await gmailRequest(() =>
+        gmail.users.messages.modify({
+          userId: "me",
+          id,
+          requestBody: {
+            addLabelIds: ["INBOX"],
+          },
+        }),
+      );
+      logAudit("unarchive", id, "success");
+      return `Email ${id} moved back to inbox.`;
+    } catch (error) {
+      logAudit("unarchive", id, "failure", (error as Error).message);
+      throw error;
+    }
+  },
+  {
+    name: "unarchive_email",
+    description: "Undo an archive by moving the email back to the inbox. Requires an ID.",
+    schema: z.object({
+      id: z.string().describe("The message ID to unarchive"),
+    }),
+  },
+);
+
+export const undeleteEmail = tool(
+  async ({ id }) => {
+    try {
+      await gmailRequest(() =>
+        gmail.users.messages.untrash({
+          userId: "me",
+          id,
+        }),
+      );
+      logAudit("undelete", id, "success");
+      return `Email ${id} restored from trash.`;
+    } catch (error) {
+      logAudit("undelete", id, "failure", (error as Error).message);
+      throw error;
+    }
+  },
+  {
+    name: "undelete_email",
+    description: "Undo a delete by restoring the email from trash. Requires an ID.",
+    schema: z.object({
+      id: z.string().describe("The message ID to restore from trash"),
+    }),
+  },
+);
+
+export const unspamEmail = tool(
+  async ({ id }) => {
+    try {
+      await gmailRequest(() =>
+        gmail.users.messages.modify({
+          userId: "me",
+          id,
+          requestBody: {
+            removeLabelIds: ["SPAM"],
+            addLabelIds: ["INBOX"],
+          },
+        }),
+      );
+      logAudit("unspam", id, "success");
+      return `Email ${id} unmarked as spam and moved back to inbox.`;
+    } catch (error) {
+      logAudit("unspam", id, "failure", (error as Error).message);
+      throw error;
+    }
+  },
+  {
+    name: "unspam_email",
+    description: "Undo a spam action by removing the SPAM label and moving back to inbox. Requires an ID.",
+    schema: z.object({
+      id: z.string().describe("The message ID to unspam"),
     }),
   },
 );

@@ -27,14 +27,21 @@ Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log
 **Two-tier agent system:**
 
 1. **Supervisor agent** (`src/index.ts`) — top-level agent with a single `clean_email` tool. Receives high-level user requests.
-2. **Email agent** (`src/agents/email.ts`) — specialized sub-agent invoked by `clean_email`. Has granular Gmail tools: `list_email`, `read_email`, `archive_email`, `delete_email`, `spam_email`.
+2. **Clean agent** (`src/agents/clean.ts`) — two-phase cleanup agent invoked by `clean_email`. Phase 1 (plan): reads all inbox emails and proposes actions without executing. Phase 2 (execute): after user confirmation, executes the approved plan. Created via `createCleanAgent("plan" | "execute")`.
+3. **Email agent** (`src/agents/email.ts`) — specialized sub-agent invoked by `manage_email`. Has granular Gmail tools: `list_email`, `read_email`, `archive_email`, `delete_email`, `spam_email`, plus undo tools: `unarchive_email`, `undelete_email`, `unspam_email`.
+
+**Destructive operation safeguards:**
+
+- **Confirmation flow** — `clean_email` tool (`src/tools/clean.ts`) runs a two-phase flow: plan → user confirmation → execute. No destructive actions happen without explicit user approval.
+- **Undo tools** — `unarchive_email` (re-adds INBOX label), `undelete_email` (untrashes), `unspam_email` (removes SPAM, re-adds INBOX). Available via the email agent.
+- **Audit trail** — all destructive and undo operations are logged to `audit.log` with email metadata (subject, from) and the reason for the action.
 
 **Key modules:**
 
 - `src/providers/gmail.ts` — OAuth2 client setup, encrypted token persistence to `.tokens.json`, rate limiter with retry logic, exports authenticated `gmail` client
 - `src/crypto.ts` — AES-256-GCM encryption/decryption for token storage, keyed by `TOKEN_ENCRYPTION_KEY`
 - `src/retry.ts` — exponential backoff with jitter for transient API failures (429, 5xx, network errors)
-- `src/audit.ts` — structured audit log for destructive email operations (archive, delete, spam) written to `audit.log`
+- `src/audit.ts` — structured audit log for email operations (archive, delete, spam, and their undo counterparts) written to `audit.log`. Each entry includes email metadata (subject, from) and the reason for the action.
 - `src/logger.ts` — structured logging via pino (writes to `winbox.log`), configurable with `LOG_LEVEL` and `LOG_FILE`
 - `src/context.ts` — `AsyncLocalStorage`-based request context; assigns a UUID `requestId` per user request, auto-injected into all pino log lines
 - `src/metrics.ts` — in-memory metrics collection for tool/API call latency, success/failure rates; `withMetrics()` wrapper and `logMetricsSummary()` for periodic reporting

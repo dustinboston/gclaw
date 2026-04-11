@@ -21,17 +21,20 @@ vi.mock("../tools/calendar.ts", () => ({
   createEvent: { name: "create_event" },
 }));
 
-import { cleanAgent } from "./clean.ts";
+import { createCleanAgent } from "./clean.ts";
 
-describe("cleanAgent", () => {
-  it("is created via createAgent", () => {
-    expect(mockCreateAgent).toHaveBeenCalledTimes(1);
-    expect(cleanAgent).toBeDefined();
+describe("createCleanAgent", () => {
+  it("creates a plan agent with only read tools", () => {
+    createCleanAgent("plan");
+    const lastCall = mockCreateAgent.mock.calls[mockCreateAgent.mock.calls.length - 1][0];
+    const names = lastCall.tools.map((t: any) => t.name);
+    expect(names).toEqual(["list_email", "read_email"]);
   });
 
-  it("has the correct tools", () => {
-    const call = mockCreateAgent.mock.calls[0][0];
-    const names = call.tools.map((t: any) => t.name);
+  it("creates an execute agent with all tools", () => {
+    createCleanAgent("execute");
+    const lastCall = mockCreateAgent.mock.calls[mockCreateAgent.mock.calls.length - 1][0];
+    const names = lastCall.tools.map((t: any) => t.name);
     expect(names).toEqual([
       "list_email",
       "read_email",
@@ -44,9 +47,17 @@ describe("cleanAgent", () => {
     ]);
   });
 
-  it("has a system prompt with cleanup instructions", () => {
-    const call = mockCreateAgent.mock.calls[0][0];
-    expect(call.systemPrompt).toContain("aggressively cleans up");
-    expect(call.systemPrompt).toContain("archive_email");
+  it("plan agent prompt contains 'PROPOSE' and no destructive instructions", () => {
+    createCleanAgent("plan");
+    const lastCall = mockCreateAgent.mock.calls[mockCreateAgent.mock.calls.length - 1][0];
+    expect(lastCall.systemPrompt).toContain("PROPOSE");
+    expect(lastCall.systemPrompt).toContain("Do NOT execute any destructive actions");
+  });
+
+  it("execute agent prompt contains execution instructions", () => {
+    createCleanAgent("execute");
+    const lastCall = mockCreateAgent.mock.calls[mockCreateAgent.mock.calls.length - 1][0];
+    expect(lastCall.systemPrompt).toContain("EXECUTE");
+    expect(lastCall.systemPrompt).toContain("audit trail");
   });
 });

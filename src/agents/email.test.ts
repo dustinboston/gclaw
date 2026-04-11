@@ -12,6 +12,9 @@ vi.mock("../tools/gmail.ts", () => ({
   archiveEmail: { name: "archive_email" },
   deleteEmail: { name: "delete_email" },
   spamEmail: { name: "spam_email" },
+  unarchiveEmail: { name: "unarchive_email" },
+  undeleteEmail: { name: "undelete_email" },
+  unspamEmail: { name: "unspam_email" },
 }));
 
 import { emailAgent } from "./email.ts";
@@ -31,6 +34,9 @@ describe("emailAgent", () => {
       "archive_email",
       "delete_email",
       "spam_email",
+      "unarchive_email",
+      "undelete_email",
+      "unspam_email",
     ]);
   });
 
@@ -38,5 +44,12 @@ describe("emailAgent", () => {
     const call = mockCreateAgent.mock.calls[0][0];
     expect(call.systemPrompt).toContain("Gmail assistant");
     expect(call.systemPrompt).toContain("list_email");
+  });
+
+  it("has undo tool instructions in the system prompt", () => {
+    const call = mockCreateAgent.mock.calls[0][0];
+    expect(call.systemPrompt).toContain("unarchive_email");
+    expect(call.systemPrompt).toContain("undelete_email");
+    expect(call.systemPrompt).toContain("unspam_email");
   });
 });

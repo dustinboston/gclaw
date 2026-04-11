@@ -5,7 +5,13 @@ import { getRequestId } from "./context.ts";
 
 const AUDIT_LOG_PATH = join(import.meta.dirname, "../audit.log");
 
-export type AuditAction = "archive" | "delete" | "spam";
+export type AuditAction = "archive" | "delete" | "spam" | "unarchive" | "undelete" | "unspam";
+
+export interface AuditMetadata {
+  subject?: string;
+  from?: string;
+  reason?: string;
+}
 
 interface AuditEntry {
   timestamp: string;
@@ -13,6 +19,9 @@ interface AuditEntry {
   action: AuditAction;
   emailId: string;
   result: "success" | "failure";
+  subject?: string;
+  from?: string;
+  reason?: string;
   error?: string;
 }
 
@@ -20,8 +29,13 @@ export function logAudit(
   action: AuditAction,
   emailId: string,
   result: "success" | "failure",
-  error?: string,
+  errorOrMetadata?: string | AuditMetadata,
 ): void {
+  const metadata: AuditMetadata =
+    typeof errorOrMetadata === "string"
+      ? { reason: errorOrMetadata }
+      : errorOrMetadata ?? {};
+
   const entry: AuditEntry = {
     timestamp: new Date().toISOString(),
     requestId: getRequestId(),
@@ -30,7 +44,10 @@ export function logAudit(
     result,
   };
 
-  if (error) entry.error = error;
+  if (metadata.subject) entry.subject = metadata.subject;
+  if (metadata.from) entry.from = metadata.from;
+  if (metadata.reason) entry.reason = metadata.reason;
+  if (result === "failure" && typeof errorOrMetadata === "string") entry.error = errorOrMetadata;
 
   const line = JSON.stringify(entry) + "\n";
 
