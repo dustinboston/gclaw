@@ -1,3 +1,11 @@
+/**
+ * Email sub-agent for granular Gmail inbox management. Handles listing,
+ * reading, archiving, deleting, marking as spam, and undoing those actions.
+ * Invoked by the supervisor via the `manage_email` tool.
+ *
+ * @module
+ */
+
 import {createAgent} from 'langchain';
 import {model} from '../model.ts';
 import {
@@ -13,6 +21,8 @@ import {
 
 const emailSystemPrompt = `
 You are a Gmail assistant that helps the user manage their inbox. You MUST use tools to fulfill every request. Do not ask for confirmation.
+
+Today's date is ${new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}.
 
 # Tools
 
@@ -48,6 +58,7 @@ You are a Gmail assistant that helps the user manage their inbox. You MUST use t
     - <Action> — "<Subject>" from <Sender>
 `;
 
+/** Pre-configured email agent with all Gmail tools. */
 export const emailAgent = createAgent({
 	model,
 	tools: [listEmail, readEmail, archiveEmail, deleteEmail, spamEmail, unarchiveEmail, undeleteEmail, unspamEmail],

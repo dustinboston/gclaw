@@ -1,9 +1,17 @@
+/**
+ * Centralized, Zod-validated application configuration loaded from environment
+ * variables. Fails fast on missing required vars with actionable error messages.
+ *
+ * @module
+ */
+
 import process from 'node:process';
 import z from 'zod';
 
 const envVarNames: Record<string, string> = {
-	openaiApiKey: 'OPENAI_API_KEY',
-	openaiModel: 'OPENAI_MODEL',
+	googleAiApiKey: 'GOOGLE_AI_API_KEY',
+	googleAiModel: 'GOOGLE_AI_MODEL',
+	googleAiThinkingLevel: 'GOOGLE_AI_THINKING_LEVEL',
 	googleClientId: 'GOOGLE_CLIENT_ID',
 	googleClientSecret: 'GOOGLE_CLIENT_SECRET',
 	oauthRedirectUrl: 'OAUTH_REDIRECT_URL',
@@ -16,12 +24,14 @@ const envVarNames: Record<string, string> = {
 	defaultTaskListId: 'DEFAULT_TASK_LIST_ID',
 	logLevel: 'LOG_LEVEL',
 	logFile: 'LOG_FILE',
+	databaseUrl: 'DATABASE_URL',
 };
 
 const configSchema = z.object({
-	// OpenAI
-	openaiApiKey: z.string().min(1),
-	openaiModel: z.string().default('gpt-5.4'),
+	// Google AI (Gemini)
+	googleAiApiKey: z.string().min(1),
+	googleAiModel: z.string().default('gemini-2.5-flash'),
+	googleAiThinkingLevel: z.enum(['off', 'low', 'medium', 'high']).default('off'),
 
 	// Google OAuth
 	googleClientId: z.string().min(1),
@@ -40,20 +50,29 @@ const configSchema = z.object({
 	defaultTaskListId: z.string().default('@default'),
 	logLevel: z.string().default('info'),
 	logFile: z.string().default('winbox.log'),
+	databaseUrl: z.string().default('postgresql://winbox:winbox@localhost:5432/winbox'),
 });
 
+/** Validated application configuration derived from environment variables. */
 export type Config = z.infer<typeof configSchema>;
 
 let _config: Config | undefined;
 
+/**
+ * Loads and validates configuration from environment variables.
+ * Results are cached after the first call.
+ *
+ * @throws {Error} If required environment variables are missing.
+ */
 export function loadConfig(): Config {
 	if (_config) {
 		return _config;
 	}
 
 	const result = configSchema.safeParse({
-		openaiApiKey: process.env.OPENAI_API_KEY,
-		openaiModel: process.env.OPENAI_MODEL,
+		googleAiApiKey: process.env.GOOGLE_AI_API_KEY,
+		googleAiModel: process.env.GOOGLE_AI_MODEL,
+		googleAiThinkingLevel: process.env.GOOGLE_AI_THINKING_LEVEL,
 		googleClientId: process.env.GOOGLE_CLIENT_ID,
 		googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
 		oauthRedirectUrl: process.env.OAUTH_REDIRECT_URL,
@@ -66,6 +85,7 @@ export function loadConfig(): Config {
 		defaultTaskListId: process.env.DEFAULT_TASK_LIST_ID,
 		logLevel: process.env.LOG_LEVEL,
 		logFile: process.env.LOG_FILE,
+		databaseUrl: process.env.DATABASE_URL,
 	});
 
 	if (!result.success) {

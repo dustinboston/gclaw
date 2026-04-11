@@ -46,6 +46,11 @@ describe("emailAgent", () => {
     expect(call.systemPrompt).toContain("list_email");
   });
 
+  it("includes today's date in the system prompt", () => {
+    const call = mockCreateAgent.mock.calls[0][0];
+    expect(call.systemPrompt).toContain("Today's date is");
+  });
+
   it("has undo tool instructions in the system prompt", () => {
     const call = mockCreateAgent.mock.calls[0][0];
     expect(call.systemPrompt).toContain("unarchive_email");

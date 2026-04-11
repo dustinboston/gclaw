@@ -34,7 +34,7 @@ vi.mock("../../config.ts", () => ({
     oauthRedirectUrl: "http://localhost:3000",
     gmailMaxConcurrent: 2,
     tokenEncryptionKey: "test-key",
-    openaiModel: "gpt-4o",
+    googleAiModel: "gemini-2.5-flash",
   }),
 }));
 

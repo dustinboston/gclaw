@@ -1,5 +1,8 @@
 /**
- * Google Tasks API client
+ * Google Tasks API client with concurrency-limited rate limiter,
+ * retry logic, and metrics. Reuses the OAuth2 client from the Gmail provider.
+ *
+ * @module
  */
 
 import {google} from 'googleapis';
@@ -10,6 +13,7 @@ import {auth} from './gmail.ts';
 
 const config = loadConfig();
 
+/** Authenticated Google Tasks API v1 client instance. */
 export const tasks = google.tasks({version: 'v1', auth});
 
 // Rate limiter to avoid "Too many concurrent requests" errors from Google.
@@ -36,6 +40,10 @@ function release() {
 	}
 }
 
+/**
+ * Executes a Tasks API call with concurrency limiting, retry, and metrics.
+ * At most {@link Config.tasksMaxConcurrent} requests run in parallel.
+ */
 export async function tasksRequest<T>(fn: () => Promise<T>): Promise<T> {
 	await acquire();
 	try {

@@ -1,6 +1,6 @@
 # Winbox
 
-Winbox is an AI personal assistant built with Node.js, TypeScript, LangChain, LangGraph, and OpenAI. It manages your Gmail inbox, Google Calendar, and Google Tasks through a conversational interface.
+Winbox is an AI personal assistant built with Node.js, TypeScript, LangChain, LangGraph, and OpenAI. It manages your Gmail inbox, Google Calendar, and Google Tasks through a conversational interface using the Gemini LLM.
 
 ## Features
 

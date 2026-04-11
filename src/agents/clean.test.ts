@@ -60,4 +60,14 @@ describe("createCleanAgent", () => {
     expect(lastCall.systemPrompt).toContain("EXECUTE");
     expect(lastCall.systemPrompt).toContain("audit trail");
   });
+
+  it("includes today's date in both prompts", () => {
+    createCleanAgent("plan");
+    const planCall = mockCreateAgent.mock.calls[mockCreateAgent.mock.calls.length - 1][0];
+    expect(planCall.systemPrompt).toContain("Today's date is");
+
+    createCleanAgent("execute");
+    const execCall = mockCreateAgent.mock.calls[mockCreateAgent.mock.calls.length - 1][0];
+    expect(execCall.systemPrompt).toContain("Today's date is");
+  });
 });

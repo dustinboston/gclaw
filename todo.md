@@ -45,7 +45,7 @@ Here's a comprehensive breakdown of what this codebase needs for enterprise read
 ### 6. Testing Gaps
 
 - Unit tests are solid (good coverage, proper mocks), but:
-  - **Zero integration tests** — all APIs are mocked
+  - ~~**Zero integration tests** — all APIs are mocked~~
   - **Zero end-to-end tests**
   - No performance/load testing for the rate limiter
 
@@ -67,28 +67,28 @@ Here's a comprehensive breakdown of what this codebase needs for enterprise read
 
 ### 9. Code Quality Tooling
 
-- No ESLint config
-- No Prettier config
-- No `tsc --noEmit` in CI for type-checking
+- ~~No ESLint config~~
+- ~~No Prettier config~~
+- ~~No `tsc --noEmit` in CI for type-checking~~
 
-### 10. Data Persistence & State
+### ~~10. Data Persistence & State~~ ✅
 
-- Conversation history uses in-memory `MemorySaver` — lost on restart
-- No database for audit logs or operation history
-- Hardcoded thread ID means no multi-session support
+- ~~Conversation history uses in-memory `MemorySaver` — lost on restart~~ — `PostgresSaver` backed by PostgreSQL via `@langchain/langgraph-checkpoint-postgres`
+- ~~No database for audit logs or operation history~~ — audit logs written to PostgreSQL `audit_log` table via `src/audit.ts`
+- ~~Hardcoded thread ID means no multi-session support~~ — dynamic sessions with `/new`, `/sessions`, `/resume <id>` CLI commands
 
 ### 11. Documentation
 
-- No API documentation for the tool interfaces
-- No threat model or security considerations doc
-- No deployment guide or runbooks
-- No incident response procedures
+- ~~No API documentation for the tool interfaces~~
+- ~~No threat model or security considerations doc~~
+- ~~No deployment guide or runbooks~~
+- ~~No incident response procedures~~
 
 ### 12. Monitoring & Alerting
 
 - No health checks
 - No APM integration (Sentry, Datadog, etc.)
-- No usage analytics
+- ~~No usage analytics~~ — every API call is persisted to PostgreSQL `analytics` table via `recordToolCall()` in `src/metrics.ts`; `getAnalytics(since?)` returns per-tool summaries (call counts, success/failure, avg/min/max latency)
 
 ---
 
@@ -110,9 +110,9 @@ The codebase has solid foundations:
 
 ## Suggested Roadmap
 
-| Phase | Focus                                                                                        | Status                                                      |
-| ----- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **1** | Encrypt tokens, add structured logging, add retry logic, add audit trail for destructive ops | ✅ Done                                                     |
-| **2** | CI/CD pipeline, integration tests, config management, startup validation                     | Partial (config ✅, CI/integration tests remaining)         |
-| **3** | User confirmation flows for destructive actions, undo/rollback, multi-session support        | Partial (confirmation ✅, undo ✅, multi-session remaining) |
-| **4** | APM/monitoring, security scanning (SAST/dependency), deployment automation                   | Not started                                                 |
+| Phase | Focus                                                                                        | Status                                              |
+| ----- | -------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| **1** | Encrypt tokens, add structured logging, add retry logic, add audit trail for destructive ops | ✅ Done                                             |
+| **2** | CI/CD pipeline, integration tests, config management, startup validation                     | Partial (config ✅, CI/integration tests remaining) |
+| **3** | User confirmation flows for destructive actions, undo/rollback, multi-session support        | ✅ Done                                             |
+| **4** | APM/monitoring, security scanning (SAST/dependency), deployment automation                   | Not started                                         |

@@ -5,3 +5,4 @@ coverage
 bin
 audit.log
 winbox.log
+.command_history

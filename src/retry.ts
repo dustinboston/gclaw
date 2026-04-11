@@ -1,6 +1,15 @@
+/**
+ * Exponential backoff with jitter for transient API failures.
+ * Retries on 408, 429, 5xx status codes and common network errors
+ * (ECONNRESET, ETIMEDOUT, ENOTFOUND, socket hang up).
+ *
+ * @module
+ */
+
 import process from 'node:process';
 import {logger} from './logger.ts';
 
+/** Options for {@link withRetry}. */
 export type RetryOptions = {
 	maxAttempts?: number;
 	baseDelayMs?: number;
@@ -50,6 +59,12 @@ function getErrorMessage(error: unknown): string {
 	return String(error);
 }
 
+/**
+ * Executes {@link fn} with automatic retries on transient errors.
+ * Uses exponential backoff with random jitter (0.75x - 1.25x).
+ *
+ * @throws The original error if all attempts are exhausted or the error is not retryable.
+ */
 export async function withRetry<T>(
 	fn: () => Promise<T>,
 	options: RetryOptions = {},

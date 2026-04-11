@@ -30,4 +30,9 @@ describe("calendarAgent", () => {
     expect(call.systemPrompt).toContain("calendar assistant");
     expect(call.systemPrompt).toContain("list_events");
   });
+
+  it("includes today's date in the system prompt", () => {
+    const call = mockCreateAgent.mock.calls[0][0];
+    expect(call.systemPrompt).toContain("Today's date is");
+  });
 });

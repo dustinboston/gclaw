@@ -1,3 +1,10 @@
+/**
+ * AES-256-GCM encryption and decryption for persisting OAuth tokens to disk.
+ * Keys are derived from `TOKEN_ENCRYPTION_KEY` via scrypt.
+ *
+ * @module
+ */
+
 import {Buffer} from 'node:buffer';
 import {
 	createCipheriv, createDecipheriv, randomBytes, scryptSync,
@@ -22,6 +29,7 @@ function getPassword(): string {
 	return password;
 }
 
+/** JSON-serializable envelope containing the ciphertext and all values needed to decrypt. */
 export type EncryptedPayload = {
 	encrypted: true;
 	salt: string;
@@ -30,6 +38,7 @@ export type EncryptedPayload = {
 	data: string;
 };
 
+/** Encrypts a UTF-8 string and returns an {@link EncryptedPayload}. */
 export function encrypt(plaintext: string): EncryptedPayload {
 	const password = getPassword();
 	const salt = randomBytes(16);
@@ -52,6 +61,7 @@ export function encrypt(plaintext: string): EncryptedPayload {
 	};
 }
 
+/** Decrypts an {@link EncryptedPayload} back to the original UTF-8 string. */
 export function decrypt(payload: EncryptedPayload): string {
 	const password = getPassword();
 	const salt = Buffer.from(payload.salt, 'hex');
@@ -66,6 +76,7 @@ export function decrypt(payload: EncryptedPayload): string {
 	return decrypted.toString('utf8');
 }
 
+/** Type guard that checks whether {@link data} is an {@link EncryptedPayload}. */
 export function isEncrypted(data: unknown): data is EncryptedPayload {
 	if (typeof data !== 'object' || data === null || !('encrypted' in data)) {
 		return false;

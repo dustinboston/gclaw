@@ -1,3 +1,11 @@
+/**
+ * Two-mode clean agent for inbox cleanup. In "plan" mode, reads all inbox
+ * emails and proposes actions without executing. In "execute" mode, carries
+ * out the approved plan with full tool access including tasks and calendar.
+ *
+ * @module
+ */
+
 import {createAgent} from 'langchain';
 import {model} from '../model.ts';
 import {
@@ -13,6 +21,8 @@ import {listEvents, createEvent} from '../tools/calendar.ts';
 const planPrompt = `
 You are an email assistant that cleans up the user's inbox. Your job is to READ every email and PROPOSE \
 an action plan. Do NOT execute any destructive actions (archive, delete, spam). Only use list_email and read_email.
+
+Today's date is ${new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}.
 
 # Workflow
 
@@ -60,6 +70,8 @@ Output the plan in this EXACT format (one line per email):
 const executePrompt = `
 You are an email assistant that cleans up the user's inbox. You MUST use tools to process every email. \
 Do not skip emails. Do not ask for confirmation. The goal is to have an empty inbox.
+
+Today's date is ${new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}.
 
 The user has already reviewed and approved a cleanup plan. Execute the plan exactly as specified.
 
@@ -143,6 +155,12 @@ const executeTools = [
 	createEvent,
 ];
 
+/**
+ * Creates a clean agent configured for the given mode.
+ *
+ * @param mode - `"plan"` gives the agent read-only tools; `"execute"` gives
+ *   it destructive tools plus task/calendar creation.
+ */
 export function createCleanAgent(mode: 'plan' | 'execute') {
 	return createAgent({
 		model,

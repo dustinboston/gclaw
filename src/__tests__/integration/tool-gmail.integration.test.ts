@@ -33,7 +33,7 @@ vi.mock("../../config.ts", () => ({
     oauthRedirectUrl: "http://localhost:3000",
     gmailMaxConcurrent: 2,
     tokenEncryptionKey: "test-key",
-    openaiModel: "gpt-4o",
+    googleAiModel: "gemini-2.5-flash",
   }),
 }));
 
@@ -43,15 +43,18 @@ vi.mock("../../crypto.ts", () => ({
   isEncrypted: vi.fn((d: any) => d?.encrypted === true),
 }));
 
-const { mockAppendFileSync } = vi.hoisted(() => ({
-  mockAppendFileSync: vi.fn(),
+const { mockPoolQuery } = vi.hoisted(() => ({
+  mockPoolQuery: vi.fn().mockResolvedValue({ rows: [] }),
+}));
+
+vi.mock("../../providers/database.ts", () => ({
+  pool: { query: mockPoolQuery },
 }));
 
 vi.mock("node:fs", () => ({
   existsSync: vi.fn().mockReturnValue(false),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
-  appendFileSync: mockAppendFileSync,
 }));
 
 // Gmail SDK mock — the lowest boundary
@@ -123,15 +126,22 @@ function fakeEmailHeaders(id: string, from: string, subject: string) {
 }
 
 function parseAuditLines(): Array<Record<string, unknown>> {
-  return mockAppendFileSync.mock.calls
+  return mockPoolQuery.mock.calls
+    .filter((call: any[]) => typeof call[0] === "string" && call[0].includes("INSERT INTO audit_log"))
     .map((call: any[]) => {
-      try {
-        return JSON.parse(call[1]);
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean);
+      const params = call[1] as any[];
+      return {
+        timestamp: params[0],
+        requestId: params[1],
+        action: params[2],
+        emailId: params[3],
+        result: params[4],
+        subject: params[5],
+        from: params[6],
+        reason: params[7],
+        error: params[8],
+      };
+    });
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────

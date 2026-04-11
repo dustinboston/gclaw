@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("@langchain/openai", () => ({
-  ChatOpenAI: class ChatOpenAI {
+vi.mock("@langchain/google-genai", () => ({
+  ChatGoogleGenerativeAI: class ChatGoogleGenerativeAI {
     config: any;
     constructor(config: any) {
       this.config = config;
@@ -9,21 +9,39 @@ vi.mock("@langchain/openai", () => ({
   },
 }));
 
+let mockThinkingLevel = "off";
 vi.mock("./config.ts", () => ({
-  loadConfig: () => ({ openaiModel: "gpt-5.4" }),
+  loadConfig: () => ({
+    googleAiModel: "gemini-3.1-pro-preview",
+    googleAiThinkingLevel: mockThinkingLevel,
+  }),
 }));
 
-import { model } from "./model.ts";
-
 describe("model", () => {
-  it("is created with correct config", () => {
+  it("is created with correct config when thinking is off", async () => {
+    mockThinkingLevel = "off";
+    vi.resetModules();
+    const { model } = await import("./model.ts");
     expect((model as any).config).toEqual({
-      model: "gpt-5.4",
+      model: "gemini-3.1-pro-preview",
       temperature: 0,
     });
   });
 
-  it("exports the model instance", () => {
+  it("includes thinkingConfig when thinking level is set", async () => {
+    mockThinkingLevel = "high";
+    vi.resetModules();
+    const { model } = await import("./model.ts");
+    expect((model as any).config).toEqual({
+      model: "gemini-3.1-pro-preview",
+      temperature: 0,
+      thinkingConfig: { thinkingLevel: "HIGH" },
+    });
+  });
+
+  it("exports the model instance", async () => {
+    vi.resetModules();
+    const { model } = await import("./model.ts");
     expect(model).toBeDefined();
   });
 });

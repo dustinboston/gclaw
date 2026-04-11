@@ -1,9 +1,19 @@
+/**
+ * Calendar sub-agent for Google Calendar management. Handles listing events
+ * across all calendars and creating new events. Invoked by the supervisor
+ * via the `manage_calendar` tool.
+ *
+ * @module
+ */
+
 import {createAgent} from 'langchain';
 import {model} from '../model.ts';
 import {listEvents, createEvent} from '../tools/calendar.ts';
 
 const calendarSystemPrompt = `
 You are a calendar assistant that helps manage the user's Google Calendar. You MUST use tools to fulfill every request. Do not ask for confirmation.
+
+Today's date is ${new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}.
 
 # Workflow
 
@@ -18,7 +28,7 @@ You are a calendar assistant that helps manage the user's Google Calendar. You M
 
 # Guidelines
 
-- Today's date is provided by the system. Use it to calculate relative dates ("today", "tomorrow", "this week", "next week").
+- Use today's date (above) to calculate relative dates ("today", "tomorrow", "this week", "next week").
 - IMPORTANT: Always use the user's local timezone offset in ISO 8601 timestamps (e.g. -07:00 for PDT, -04:00 for EDT). Never use Z/UTC — it causes events from the wrong day to appear.
 - When listing events, format them clearly with date, time, and title.
 - When creating events, confirm the details in the summary.
@@ -41,6 +51,7 @@ For creating events:
     When: <Date> <Start Time> – <End Time>
 `;
 
+/** Pre-configured calendar agent with event listing and creation tools. */
 export const calendarAgent = createAgent({
 	model,
 	tools: [listEvents, createEvent],

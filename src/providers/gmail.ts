@@ -1,3 +1,13 @@
+/**
+ * Gmail API client with OAuth2 authentication, encrypted token persistence,
+ * concurrency-limited rate limiter, retry logic, and metrics.
+ *
+ * Tokens are stored encrypted in `.tokens.json` at the project root and
+ * automatically refreshed when the OAuth2 client emits new tokens.
+ *
+ * @module
+ */
+
 import {readFileSync, writeFileSync, existsSync} from 'node:fs';
 import {join} from 'node:path';
 import {google, type Auth} from 'googleapis';
@@ -41,6 +51,7 @@ auth.on('tokens', tokens => {
 	logger.info('OAuth tokens refreshed and saved (encrypted)');
 });
 
+/** Shared OAuth2 client, also used by the calendar and tasks providers. */
 export {auth};
 
 const rawGmail = google.gmail({version: 'v1', auth});
@@ -69,6 +80,10 @@ function release() {
 	}
 }
 
+/**
+ * Executes a Gmail API call with concurrency limiting, retry, and metrics.
+ * At most {@link Config.gmailMaxConcurrent} requests run in parallel.
+ */
 export async function gmailRequest<T>(fn: () => Promise<T>): Promise<T> {
 	await acquire();
 	try {
@@ -78,4 +93,5 @@ export async function gmailRequest<T>(fn: () => Promise<T>): Promise<T> {
 	}
 }
 
+/** Authenticated Gmail API v1 client instance. */
 export const gmail = rawGmail;

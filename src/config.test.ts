@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { loadConfig, resetConfig } from "./config.ts";
 
 const VALID_ENV = {
-  OPENAI_API_KEY: "sk-test",
+  GOOGLE_AI_API_KEY: "test-key",
   GOOGLE_CLIENT_ID: "client-id",
   GOOGLE_CLIENT_SECRET: "client-secret",
   TOKEN_ENCRYPTION_KEY: "a".repeat(64),
@@ -28,7 +28,7 @@ describe("loadConfig", () => {
 
   it("loads config with all required env vars", () => {
     const config = loadConfig();
-    expect(config.openaiApiKey).toBe("sk-test");
+    expect(config.googleAiApiKey).toBe("test-key");
     expect(config.googleClientId).toBe("client-id");
     expect(config.googleClientSecret).toBe("client-secret");
     expect(config.tokenEncryptionKey).toBe("a".repeat(64));
@@ -36,7 +36,8 @@ describe("loadConfig", () => {
 
   it("applies defaults for optional values", () => {
     const config = loadConfig();
-    expect(config.openaiModel).toBe("gpt-5.4");
+    expect(config.googleAiModel).toBe("gemini-2.5-flash");
+    expect(config.googleAiThinkingLevel).toBe("off");
     expect(config.oauthRedirectUrl).toBe("http://localhost:3000");
     expect(config.oauthPort).toBe(3000);
     expect(config.gmailMaxConcurrent).toBe(2);
@@ -45,9 +46,9 @@ describe("loadConfig", () => {
     expect(config.logLevel).toBe("info");
   });
 
-  it("throws when OPENAI_API_KEY is missing", () => {
-    delete process.env.OPENAI_API_KEY;
-    expect(() => loadConfig()).toThrow("OPENAI_API_KEY");
+  it("throws when GOOGLE_AI_API_KEY is missing", () => {
+    delete process.env.GOOGLE_AI_API_KEY;
+    expect(() => loadConfig()).toThrow("GOOGLE_AI_API_KEY");
   });
 
   it("throws when GOOGLE_CLIENT_ID is missing", () => {
@@ -72,16 +73,31 @@ describe("loadConfig", () => {
   });
 
   it("accepts env var overrides for defaults", () => {
-    process.env.OPENAI_MODEL = "gpt-4o";
+    process.env.GOOGLE_AI_MODEL = "gemini-2.5-pro";
     process.env.OAUTH_PORT = "4000";
     process.env.GMAIL_MAX_CONCURRENT = "5";
     const config = loadConfig();
-    expect(config.openaiModel).toBe("gpt-4o");
+    expect(config.googleAiModel).toBe("gemini-2.5-pro");
     expect(config.oauthPort).toBe(4000);
     expect(config.gmailMaxConcurrent).toBe(5);
 
-    delete process.env.OPENAI_MODEL;
+    delete process.env.GOOGLE_AI_MODEL;
     delete process.env.OAUTH_PORT;
     delete process.env.GMAIL_MAX_CONCURRENT;
+  });
+
+  it("accepts thinking level override", () => {
+    process.env.GOOGLE_AI_THINKING_LEVEL = "high";
+    const config = loadConfig();
+    expect(config.googleAiThinkingLevel).toBe("high");
+
+    delete process.env.GOOGLE_AI_THINKING_LEVEL;
+  });
+
+  it("rejects invalid thinking level", () => {
+    process.env.GOOGLE_AI_THINKING_LEVEL = "turbo";
+    expect(() => loadConfig()).toThrow();
+
+    delete process.env.GOOGLE_AI_THINKING_LEVEL;
   });
 });

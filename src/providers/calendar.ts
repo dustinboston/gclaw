@@ -1,5 +1,8 @@
 /**
- * Google Calendar API client
+ * Google Calendar API client with concurrency-limited rate limiter,
+ * retry logic, and metrics. Reuses the OAuth2 client from the Gmail provider.
+ *
+ * @module
  */
 
 import {google} from 'googleapis';
@@ -10,6 +13,7 @@ import {auth} from './gmail.ts';
 
 const config = loadConfig();
 
+/** Authenticated Google Calendar API v3 client instance. */
 export const calendar = google.calendar({version: 'v3', auth});
 
 // Rate limiter to avoid "Too many concurrent requests" errors from Google.
@@ -36,6 +40,10 @@ function release() {
 	}
 }
 
+/**
+ * Executes a Calendar API call with concurrency limiting, retry, and metrics.
+ * At most {@link Config.calendarMaxConcurrent} requests run in parallel.
+ */
 export async function calendarRequest<T>(fn: () => Promise<T>): Promise<T> {
 	await acquire();
 	try {

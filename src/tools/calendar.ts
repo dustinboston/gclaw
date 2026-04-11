@@ -1,3 +1,10 @@
+/**
+ * LangChain tools for Google Calendar operations. Provides event listing
+ * across all calendars and event creation on the default calendar.
+ *
+ * @module
+ */
+
 import process from 'node:process';
 import {HumanMessage, tool, AIMessageChunk} from 'langchain';
 import z from 'zod';
@@ -5,6 +12,7 @@ import {calendar, calendarRequest} from '../providers/calendar.ts';
 import {loadConfig} from '../config.ts';
 import {logger} from '../logger.ts';
 
+/** Supervisor-level tool that delegates calendar requests to the calendar sub-agent. */
 export const manageCalendar = tool(
 	async ({request}) => {
 		try {
@@ -51,6 +59,7 @@ export const manageCalendar = tool(
 	},
 );
 
+/** Lists events across all of the user's calendars in a time range. */
 export const listEvents = tool(
 	async ({timeMin, timeMax, maxResults}) => {
 		const calendarsResponse = await calendarRequest(async () =>
@@ -112,6 +121,7 @@ export const listEvents = tool(
 	},
 );
 
+/** Creates an event on the user's default calendar. */
 export const createEvent = tool(
 	async ({summary, description, startDateTime, endDateTime}) => {
 		const config = loadConfig();

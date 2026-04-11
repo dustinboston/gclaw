@@ -1,3 +1,11 @@
+/**
+ * Two-phase inbox cleanup tool. Phase 1 (plan) reads all inbox emails and
+ * proposes actions. Phase 2 (execute) runs after user confirmation. No
+ * destructive actions happen without explicit approval.
+ *
+ * @module
+ */
+
 import process from 'node:process';
 import * as readline from 'node:readline/promises';
 import {HumanMessage, tool, AIMessageChunk} from 'langchain';
@@ -40,6 +48,11 @@ async function askConfirmation(plan: string): Promise<boolean> {
 	}
 }
 
+/**
+ * Supervisor-level tool that orchestrates the plan-confirm-execute cleanup flow.
+ * Streams the plan to stdout, prompts the user for confirmation via stdin,
+ * then executes the approved plan.
+ */
 export const cleanEmail = tool(
 	async ({request}) => {
 		try {

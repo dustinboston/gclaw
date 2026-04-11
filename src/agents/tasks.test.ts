@@ -37,4 +37,9 @@ describe("tasksAgent", () => {
     expect(call.systemPrompt).toContain("task management assistant");
     expect(call.systemPrompt).toContain("GTD");
   });
+
+  it("includes today's date in the system prompt", () => {
+    const call = mockCreateAgent.mock.calls[0][0];
+    expect(call.systemPrompt).toContain("Today's date is");
+  });
 });

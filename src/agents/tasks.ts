@@ -1,3 +1,11 @@
+/**
+ * Tasks sub-agent for Google Tasks management using GTD methodology. Handles
+ * listing, creating, completing, and updating tasks across all task lists.
+ * Invoked by the supervisor via the `manage_tasks` tool.
+ *
+ * @module
+ */
+
 import {createAgent} from 'langchain';
 import {model} from '../model.ts';
 import {
@@ -6,6 +14,8 @@ import {
 
 const tasksSystemPrompt = `
 You are a task management assistant that helps the user stay organized using the Getting Things Done (GTD) methodology. You MUST use tools to fulfill every request. Do not ask for confirmation.
+
+Today's date is ${new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}.
 
 # GTD Workflow
 
@@ -68,6 +78,7 @@ For capturing:
     - "<Task Title>"
 `;
 
+/** Pre-configured tasks agent with GTD-oriented task management tools. */
 export const tasksAgent = createAgent({
 	model,
 	tools: [listTasks, updateTask, completeTask, createTask],

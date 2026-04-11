@@ -1,3 +1,10 @@
+/**
+ * LangChain tools for Google Tasks operations. Provides task listing across
+ * all task lists, task creation, completion, and updates.
+ *
+ * @module
+ */
+
 import process from 'node:process';
 import {HumanMessage, tool, AIMessageChunk} from 'langchain';
 import z from 'zod';
@@ -5,6 +12,7 @@ import {tasks, tasksRequest} from '../providers/tasks.ts';
 import {loadConfig} from '../config.ts';
 import {logger} from '../logger.ts';
 
+/** Supervisor-level tool that delegates task requests to the tasks sub-agent. */
 export const manageTasks = tool(
 	async ({request}) => {
 		try {
@@ -51,6 +59,7 @@ export const manageTasks = tool(
 	},
 );
 
+/** Lists tasks across all of the user's task lists. */
 export const listTasks = tool(
 	async ({showCompleted, maxResults}) => {
 		const listsResponse = await tasksRequest(async () => tasks.tasklists.list());
@@ -94,6 +103,7 @@ export const listTasks = tool(
 	},
 );
 
+/** Marks a task as completed. */
 export const completeTask = tool(
 	async ({id, listId}) => {
 		await tasksRequest(async () =>
@@ -117,6 +127,7 @@ export const completeTask = tool(
 	},
 );
 
+/** Updates an existing task's title, notes, or due date. */
 export const updateTask = tool(
 	async ({id, listId, title, notes, due}) => {
 		const body: Record<string, string> = {};
@@ -154,6 +165,7 @@ export const updateTask = tool(
 	},
 );
 
+/** Creates a new task in Google Tasks. */
 export const createTask = tool(
 	async ({title, notes, listId}) => {
 		const config = loadConfig();

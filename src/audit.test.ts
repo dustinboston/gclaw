@@ -1,71 +1,76 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import {describe, it, expect, vi, beforeEach} from 'vitest';
 
-const { mockAppendFileSync } = vi.hoisted(() => ({
-  mockAppendFileSync: vi.fn(),
+const {mockQuery} = vi.hoisted(() => ({
+	mockQuery: vi.fn().mockResolvedValue({rows: []}),
 }));
 
-vi.mock("node:fs", () => ({
-  appendFileSync: mockAppendFileSync,
+vi.mock('./providers/database.ts', () => ({
+	pool: {query: mockQuery},
 }));
 
-vi.mock("./logger.ts", () => ({
-  logger: {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-  },
+vi.mock('./logger.ts', () => ({
+	logger: {
+		info: vi.fn(),
+		error: vi.fn(),
+		warn: vi.fn(),
+		debug: vi.fn(),
+	},
 }));
 
-import { logAudit } from "./audit.ts";
-import { logger } from "./logger.ts";
+import {logAudit} from './audit.ts';
+import {logger} from './logger.ts';
 
-describe("logAudit", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe('logAudit', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
 
-  it("writes a JSON line to the audit log file", () => {
-    logAudit("archive", "msg123", "success");
+	it('inserts an audit entry into the database', async () => {
+		await logAudit('archive', 'msg123', 'success');
 
-    expect(mockAppendFileSync).toHaveBeenCalledTimes(1);
-    const [, line] = mockAppendFileSync.mock.calls[0];
-    const entry = JSON.parse(line.trim());
-    expect(entry.action).toBe("archive");
-    expect(entry.emailId).toBe("msg123");
-    expect(entry.result).toBe("success");
-    expect(entry.timestamp).toBeDefined();
-    expect(entry.error).toBeUndefined();
-  });
+		expect(mockQuery).toHaveBeenCalledTimes(1);
+		const [sql, params] = mockQuery.mock.calls[0];
+		expect(sql).toContain('INSERT INTO audit_log');
+		expect(params[2]).toBe('archive');
+		expect(params[3]).toBe('msg123');
+		expect(params[4]).toBe('success');
+	});
 
-  it("includes error field on failure", () => {
-    logAudit("delete", "msg456", "failure", "API error");
+	it('includes metadata fields in the insert', async () => {
+		await logAudit('delete', 'msg456', 'success', {
+			subject: 'Test Subject',
+			from: 'sender@example.com',
+			reason: 'spam-like content',
+		});
 
-    const [, line] = mockAppendFileSync.mock.calls[0];
-    const entry = JSON.parse(line.trim());
-    expect(entry.action).toBe("delete");
-    expect(entry.result).toBe("failure");
-    expect(entry.error).toBe("API error");
-  });
+		const [, params] = mockQuery.mock.calls[0];
+		expect(params[5]).toBe('Test Subject');
+		expect(params[6]).toBe('sender@example.com');
+		expect(params[7]).toBe('spam-like content');
+	});
 
-  it("logs to the structured logger", () => {
-    logAudit("spam", "msg789", "success");
-    expect(logger.info).toHaveBeenCalledWith(
-      { action: "spam", emailId: "msg789", result: "success" },
-      "Audit: email action",
-    );
-  });
+	it('includes error field on failure', async () => {
+		await logAudit('delete', 'msg456', 'failure', 'API error');
 
-  it("handles file write errors gracefully", () => {
-    mockAppendFileSync.mockImplementation(() => {
-      throw new Error("disk full");
-    });
+		const [, params] = mockQuery.mock.calls[0];
+		expect(params[8]).toBe('API error');
+	});
 
-    // Should not throw
-    logAudit("archive", "msg000", "success");
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({ err: expect.any(Error) }),
-      "Failed to write audit log",
-    );
-  });
+	it('logs to the structured logger', async () => {
+		await logAudit('spam', 'msg789', 'success');
+		expect(logger.info).toHaveBeenCalledWith(
+			{action: 'spam', emailId: 'msg789', result: 'success'},
+			'Audit: email action',
+		);
+	});
+
+	it('handles database errors gracefully', async () => {
+		mockQuery.mockRejectedValueOnce(new Error('connection refused'));
+
+		await logAudit('archive', 'msg000', 'success');
+		expect(logger.error).toHaveBeenCalledWith(
+			expect.objectContaining({err: expect.any(Error)}),
+			'Failed to write audit log',
+		);
+	});
 });

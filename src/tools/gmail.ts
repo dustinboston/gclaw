@@ -1,3 +1,11 @@
+/**
+ * LangChain tools for Gmail operations. Provides granular email management
+ * (list, read, archive, delete, spam) and their undo counterparts. All
+ * destructive operations are logged to the audit trail.
+ *
+ * @module
+ */
+
 import process from 'node:process';
 import {HumanMessage, tool, AIMessageChunk} from 'langchain';
 import z from 'zod';
@@ -9,6 +17,7 @@ function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
+/** Supervisor-level tool that delegates email requests to the email sub-agent. */
 export const manageEmail = tool(
 	async ({request}) => {
 		try {
@@ -54,6 +63,7 @@ export const manageEmail = tool(
 	},
 );
 
+/** Lists message IDs from a Gmail label. */
 export const listEmail = tool(
 	async ({label, maxResults}) => {
 		const response = await gmailRequest(async () =>
@@ -82,6 +92,7 @@ export const listEmail = tool(
 	},
 );
 
+/** Reads an email's metadata (from, to, subject, date, snippet, labels). */
 export const readEmail = tool(
 	async ({id}) => {
 		const response = await gmailRequest(async () =>
@@ -116,6 +127,7 @@ export const readEmail = tool(
 	},
 );
 
+/** Archives an email by removing the INBOX label. Logged to audit trail. */
 export const archiveEmail = tool(
 	async ({id, subject, from, reason}) => {
 		const meta: AuditMetadata = {subject, from, reason};
@@ -128,10 +140,10 @@ export const archiveEmail = tool(
 						removeLabelIds: ['INBOX'],
 					},
 				}));
-			logAudit('archive', id, 'success', meta);
+			await logAudit('archive', id, 'success', meta);
 			return `Email ${id} archived successfully.`;
 		} catch (error) {
-			logAudit('archive', id, 'failure', getErrorMessage(error));
+			await logAudit('archive', id, 'failure', getErrorMessage(error));
 			throw error;
 		}
 	},
@@ -147,6 +159,7 @@ export const archiveEmail = tool(
 	},
 );
 
+/** Moves an email to trash. Logged to audit trail. */
 export const deleteEmail = tool(
 	async ({id, subject, from, reason}) => {
 		const meta: AuditMetadata = {subject, from, reason};
@@ -156,10 +169,10 @@ export const deleteEmail = tool(
 					userId: 'me',
 					id,
 				}));
-			logAudit('delete', id, 'success', meta);
+			await logAudit('delete', id, 'success', meta);
 			return `Email ${id} deleted successfully.`;
 		} catch (error) {
-			logAudit('delete', id, 'failure', getErrorMessage(error));
+			await logAudit('delete', id, 'failure', getErrorMessage(error));
 			throw error;
 		}
 	},
@@ -175,6 +188,7 @@ export const deleteEmail = tool(
 	},
 );
 
+/** Marks an email as spam (adds SPAM label, removes INBOX). Logged to audit trail. */
 export const spamEmail = tool(
 	async ({id, subject, from, reason}) => {
 		const meta: AuditMetadata = {subject, from, reason};
@@ -188,10 +202,10 @@ export const spamEmail = tool(
 						removeLabelIds: ['INBOX'],
 					},
 				}));
-			logAudit('spam', id, 'success', meta);
+			await logAudit('spam', id, 'success', meta);
 			return `Email ${id} marked as spam successfully.`;
 		} catch (error) {
-			logAudit('spam', id, 'failure', getErrorMessage(error));
+			await logAudit('spam', id, 'failure', getErrorMessage(error));
 			throw error;
 		}
 	},
@@ -207,6 +221,7 @@ export const spamEmail = tool(
 	},
 );
 
+/** Undoes an archive by re-adding the INBOX label. Logged to audit trail. */
 export const unarchiveEmail = tool(
 	async ({id}) => {
 		try {
@@ -218,10 +233,10 @@ export const unarchiveEmail = tool(
 						addLabelIds: ['INBOX'],
 					},
 				}));
-			logAudit('unarchive', id, 'success');
+			await logAudit('unarchive', id, 'success');
 			return `Email ${id} moved back to inbox.`;
 		} catch (error) {
-			logAudit('unarchive', id, 'failure', getErrorMessage(error));
+			await logAudit('unarchive', id, 'failure', getErrorMessage(error));
 			throw error;
 		}
 	},
@@ -234,6 +249,7 @@ export const unarchiveEmail = tool(
 	},
 );
 
+/** Restores an email from trash. Logged to audit trail. */
 export const undeleteEmail = tool(
 	async ({id}) => {
 		try {
@@ -242,10 +258,10 @@ export const undeleteEmail = tool(
 					userId: 'me',
 					id,
 				}));
-			logAudit('undelete', id, 'success');
+			await logAudit('undelete', id, 'success');
 			return `Email ${id} restored from trash.`;
 		} catch (error) {
-			logAudit('undelete', id, 'failure', getErrorMessage(error));
+			await logAudit('undelete', id, 'failure', getErrorMessage(error));
 			throw error;
 		}
 	},
@@ -258,6 +274,7 @@ export const undeleteEmail = tool(
 	},
 );
 
+/** Removes the SPAM label and moves an email back to inbox. Logged to audit trail. */
 export const unspamEmail = tool(
 	async ({id}) => {
 		try {
@@ -270,10 +287,10 @@ export const unspamEmail = tool(
 						addLabelIds: ['INBOX'],
 					},
 				}));
-			logAudit('unspam', id, 'success');
+			await logAudit('unspam', id, 'success');
 			return `Email ${id} unmarked as spam and moved back to inbox.`;
 		} catch (error) {
-			logAudit('unspam', id, 'failure', getErrorMessage(error));
+			await logAudit('unspam', id, 'failure', getErrorMessage(error));
 			throw error;
 		}
 	},

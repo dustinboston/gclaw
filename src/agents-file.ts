@@ -1,15 +1,23 @@
 /**
- * Note: we don't cache this file so that the user can update it while the
- * application is running and see the changes immediately.
+ * Loads an agent instruction file (AGENTS.md, CLAUDE.md, etc.) from the
+ * project root and injects it into agent system prompts at runtime.
+ *
+ * Not cached so that edits are picked up without restart.
+ *
+ * @module
  */
+
 import {existsSync} from 'node:fs';
 import {readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import process from 'node:process';
 
 /**
- * Find the first agent file that exists in the root directory of the project.
- * @returns the content of an agent file or an empty string
+ * Returns the contents of the first agent instruction file found in the
+ * project root, checking in priority order.
+ *
+ * @param agents - Filenames to search for, in priority order.
+ * @returns The file contents, or an empty string if none exist.
  */
 export async function loadAgentsFile(agents = ['AGENTS.md', 'AGENT.md', 'CLAUDE.md', 'GEMINI.md', 'README.md']) {
 	// Not using Promise.all, Promise.race, or Promise.any because we want to
@@ -27,9 +35,10 @@ export async function loadAgentsFile(agents = ['AGENTS.md', 'AGENT.md', 'CLAUDE.
 }
 
 /**
- * Load an agent file from the root directory of the project.
- * @param agentFileName The name of the agent file to load.
- * @returns The content of the agent file or an empty string
+ * Reads a single agent instruction file from the project root.
+ *
+ * @param agentFileName - The filename to read (e.g. `"AGENTS.md"`).
+ * @returns The file contents, or an empty string if it doesn't exist or can't be read.
  */
 export async function readAgentsFile(agentFileName: string) {
 	const agentFile = join(process.cwd(), agentFileName);
