@@ -24,6 +24,19 @@ vi.mock("../providers/tasks.ts", () => ({
   },
 }));
 
+vi.mock("../config.ts", () => ({
+  loadConfig: () => ({ defaultTaskListId: "@default" }),
+}));
+
+vi.mock("../logger.ts", () => ({
+  logger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 import {
   manageTasks,
   listTasks,

@@ -11,6 +11,7 @@ import { manageCalendar } from "./tools/calendar.ts";
 import { manageTasks } from "./tools/tasks.ts";
 import { model } from "./model.ts";
 import { loadAgentsFile } from "./agents-file.ts";
+import { logger } from "./logger.ts";
 
 // Setup
 // ----------------------------------------------------------------------------
@@ -57,6 +58,7 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
+logger.debug("Winbox started");
 console.log("Winbox — your personal assistant");
 console.log('Type "exit" to quit.\n');
 
@@ -73,18 +75,23 @@ while (true) {
   if (!trimmed) continue;
   if (trimmed.toLowerCase() === "exit") break;
 
-  const stream = await supervisorAgent.stream(
-    { messages: [new HumanMessage(trimmed)] },
-    { ...config, streamMode: "messages" },
-  );
+  try {
+    const stream = await supervisorAgent.stream(
+      { messages: [new HumanMessage(trimmed)] },
+      { ...config, streamMode: "messages" },
+    );
 
-  for await (const [message] of stream) {
-    if (message instanceof AIMessageChunk && message.text) {
-      process.stdout.write(message.text);
+    for await (const [message] of stream) {
+      if (message instanceof AIMessageChunk && message.text) {
+        process.stdout.write(message.text);
+      }
     }
-  }
 
-  process.stdout.write("\n\n");
+    process.stdout.write("\n\n");
+  } catch (error) {
+    logger.error({ err: error }, "Agent error");
+    console.error(`\nError: ${(error as Error).message}\n`);
+  }
 }
 
 rl.close();

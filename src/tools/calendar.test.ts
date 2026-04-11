@@ -19,6 +19,19 @@ vi.mock("../providers/calendar.ts", () => ({
   },
 }));
 
+vi.mock("../config.ts", () => ({
+  loadConfig: () => ({ defaultCalendarId: "primary" }),
+}));
+
+vi.mock("../logger.ts", () => ({
+  logger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 import { manageCalendar, listEvents, createEvent } from "./calendar.ts";
 import { AIMessageChunk, HumanMessage } from "langchain";
 

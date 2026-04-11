@@ -1,26 +1,33 @@
 import { HumanMessage, tool, AIMessageChunk } from "langchain";
 import z from "zod";
 import { calendar } from "../providers/calendar.ts";
+import { loadConfig } from "../config.ts";
+import { logger } from "../logger.ts";
 
 export const manageCalendar = tool(
   async ({ request }) => {
-    const { calendarAgent } = await import("../agents/calendar.ts");
-    const stream = await calendarAgent.stream(
-      { messages: [new HumanMessage(request)] },
-      { recursionLimit: 50, streamMode: "messages" },
-    );
+    try {
+      const { calendarAgent } = await import("../agents/calendar.ts");
+      const stream = await calendarAgent.stream(
+        { messages: [new HumanMessage(request)] },
+        { recursionLimit: 50, streamMode: "messages" },
+      );
 
-    let lastText = "";
+      let lastText = "";
 
-    for await (const [message] of stream) {
-      if (!(message instanceof AIMessageChunk)) continue;
-      if (message.text) {
-        lastText += message.text;
+      for await (const [message] of stream) {
+        if (!(message instanceof AIMessageChunk)) continue;
+        if (message.text) {
+          lastText += message.text;
+        }
       }
-    }
 
-    if (lastText) process.stdout.write("\n");
-    return "Calendar request complete. Results already displayed to user.";
+      if (lastText) process.stdout.write("\n");
+      return "Calendar request complete. Results already displayed to user.";
+    } catch (error) {
+      logger.error({ err: error }, "Calendar agent failed");
+      return `Calendar request failed: ${(error as Error).message}`;
+    }
   },
   {
     name: "manage_calendar",
@@ -88,8 +95,9 @@ export const listEvents = tool(
 
 export const createEvent = tool(
   async ({ summary, description, startDateTime, endDateTime }) => {
+    const config = loadConfig();
     await calendar.events.insert({
-      calendarId: "primary",
+      calendarId: config.defaultCalendarId,
       requestBody: {
         summary,
         description,

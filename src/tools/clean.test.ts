@@ -6,6 +6,15 @@ vi.mock("../agents/clean.ts", () => ({
   cleanAgent: { stream: mockStream },
 }));
 
+vi.mock("../logger.ts", () => ({
+  logger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 import { cleanEmail } from "./clean.ts";
 import { AIMessageChunk, HumanMessage } from "langchain";
 

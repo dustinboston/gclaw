@@ -9,6 +9,10 @@ vi.mock("@langchain/openai", () => ({
   },
 }));
 
+vi.mock("./config.ts", () => ({
+  loadConfig: () => ({ openaiModel: "gpt-5.4" }),
+}));
+
 import { model } from "./model.ts";
 
 describe("model", () => {

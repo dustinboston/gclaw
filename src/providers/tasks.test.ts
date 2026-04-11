@@ -22,6 +22,29 @@ vi.mock("node:fs", () => ({
   writeFileSync: vi.fn(),
 }));
 
+vi.mock("../crypto.ts", () => ({
+  encrypt: vi.fn(),
+  decrypt: vi.fn(),
+  isEncrypted: vi.fn(() => false),
+}));
+
+vi.mock("../retry.ts", () => ({
+  withRetry: vi.fn((fn: () => any) => fn()),
+}));
+
+vi.mock("../logger.ts", () => ({
+  logger: { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("../config.ts", () => ({
+  loadConfig: () => ({
+    googleClientId: "test-id",
+    googleClientSecret: "test-secret",
+    oauthRedirectUrl: "http://localhost:3000",
+    gmailMaxConcurrent: 2,
+  }),
+}));
+
 import { tasks } from "./tasks.ts";
 
 describe("tasks provider", () => {

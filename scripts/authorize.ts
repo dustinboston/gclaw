@@ -2,6 +2,8 @@ import "dotenv/config";
 import { createServer } from "node:http";
 import { execSync } from "node:child_process";
 import { auth } from "../src/providers/gmail.ts";
+import { logger } from "../src/logger.ts";
+import { loadConfig } from "../src/config.ts";
 
 const url = auth.generateAuthUrl({
   access_type: "offline",
@@ -13,8 +15,10 @@ const url = auth.generateAuthUrl({
   ],
 });
 
+const config = loadConfig();
+
 const server = createServer(async (req, res) => {
-  const code = new URL(req.url!, "http://localhost:3000").searchParams.get(
+  const code = new URL(req.url!, config.oauthRedirectUrl).searchParams.get(
     "code",
   );
   if (!code) {
@@ -28,16 +32,17 @@ const server = createServer(async (req, res) => {
     res
       .writeHead(200, { "Content-Type": "text/html" })
       .end("<h1>Authorized! You can close this tab.</h1>");
-    console.log("Tokens saved to .tokens.json");
+    logger.info("Tokens saved to .tokens.json (encrypted)");
   } catch (err) {
     res.writeHead(500).end("Token exchange failed.");
-    console.error(err);
+    logger.error({ err }, "Token exchange failed");
   } finally {
     server.close();
   }
 });
 
-server.listen(3000, () => {
+server.listen(config.oauthPort, () => {
+  logger.info("Opening browser for Google authorization");
   console.log("Opening browser for Google authorization...\n");
   execSync(`start "" "${url}"`);
 });

@@ -71,6 +71,14 @@ vi.mock("./model.ts", () => ({ model: {} }));
 vi.mock("./agents-file.ts", () => ({
   loadAgentsFile: vi.fn().mockResolvedValue("agent file content"),
 }));
+vi.mock("./logger.ts", () => ({
+  logger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 vi.mock("node:readline/promises", () => ({
   createInterface: vi.fn().mockReturnValue({
     question: mockRlQuestion,

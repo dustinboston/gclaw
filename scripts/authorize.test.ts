@@ -31,6 +31,35 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
 }));
+
+vi.mock("../src/crypto.ts", () => ({
+  encrypt: vi.fn((plaintext: string) => ({ encrypted: true, data: plaintext })),
+  decrypt: vi.fn((payload: any) => payload.data),
+  isEncrypted: vi.fn(() => false),
+}));
+
+vi.mock("../src/retry.ts", () => ({
+  withRetry: vi.fn((fn: () => any) => fn()),
+}));
+
+vi.mock("../src/logger.ts", () => ({
+  logger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+vi.mock("../src/config.ts", () => ({
+  loadConfig: () => ({
+    googleClientId: "test-id",
+    googleClientSecret: "test-secret",
+    oauthRedirectUrl: "http://localhost:3000",
+    oauthPort: 3000,
+    gmailMaxConcurrent: 2,
+  }),
+}));
 const { mockExecSync } = vi.hoisted(() => ({ mockExecSync: vi.fn() }));
 vi.mock("node:child_process", () => ({
   execSync: mockExecSync,
@@ -96,7 +125,6 @@ describe("authorize script", () => {
 
   it("handles token exchange failure", async () => {
     mockGetToken.mockRejectedValue(new Error("exchange failed"));
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const res = {
       writeHead: vi.fn().mockReturnThis(),
@@ -106,7 +134,6 @@ describe("authorize script", () => {
     await serverCallback()({ url: "/?code=bad" }, res);
     expect(res.writeHead).toHaveBeenCalledWith(500);
     expect(res.end).toHaveBeenCalledWith("Token exchange failed.");
-    consoleSpy.mockRestore();
   });
 
   it("opens browser when server starts listening", () => {

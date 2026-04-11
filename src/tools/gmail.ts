@@ -1,26 +1,33 @@
 import { HumanMessage, tool, AIMessageChunk } from "langchain";
 import z from "zod";
 import { gmail, gmailRequest } from "../providers/gmail.ts";
+import { logAudit } from "../audit.ts";
+import { logger } from "../logger.ts";
 
 export const manageEmail = tool(
   async ({ request }) => {
-    const { emailAgent } = await import("../agents/email.ts");
-    const stream = await emailAgent.stream(
-      { messages: [new HumanMessage(request)] },
-      { recursionLimit: 150, streamMode: "messages" },
-    );
+    try {
+      const { emailAgent } = await import("../agents/email.ts");
+      const stream = await emailAgent.stream(
+        { messages: [new HumanMessage(request)] },
+        { recursionLimit: 150, streamMode: "messages" },
+      );
 
-    let lastText = "";
+      let lastText = "";
 
-    for await (const [message] of stream) {
-      if (!(message instanceof AIMessageChunk)) continue;
-      if (message.text) {
-        lastText += message.text;
+      for await (const [message] of stream) {
+        if (!(message instanceof AIMessageChunk)) continue;
+        if (message.text) {
+          lastText += message.text;
+        }
       }
-    }
 
-    if (lastText) process.stdout.write("\n");
-    return "Email request complete. Results already displayed to user.";
+      if (lastText) process.stdout.write("\n");
+      return "Email request complete. Results already displayed to user.";
+    } catch (error) {
+      logger.error({ err: error }, "Email agent failed");
+      return `Email request failed: ${(error as Error).message}`;
+    }
   },
   {
     name: "manage_email",
@@ -103,16 +110,22 @@ export const readEmail = tool(
 
 export const archiveEmail = tool(
   async ({ id }) => {
-    await gmailRequest(() =>
-      gmail.users.messages.modify({
-        userId: "me",
-        id,
-        requestBody: {
-          removeLabelIds: ["INBOX"],
-        },
-      }),
-    );
-    return `Email ${id} archived successfully.`;
+    try {
+      await gmailRequest(() =>
+        gmail.users.messages.modify({
+          userId: "me",
+          id,
+          requestBody: {
+            removeLabelIds: ["INBOX"],
+          },
+        }),
+      );
+      logAudit("archive", id, "success");
+      return `Email ${id} archived successfully.`;
+    } catch (error) {
+      logAudit("archive", id, "failure", (error as Error).message);
+      throw error;
+    }
   },
   {
     name: "archive_email",
@@ -125,13 +138,19 @@ export const archiveEmail = tool(
 
 export const deleteEmail = tool(
   async ({ id }) => {
-    await gmailRequest(() =>
-      gmail.users.messages.trash({
-        userId: "me",
-        id,
-      }),
-    );
-    return `Email ${id} deleted successfully.`;
+    try {
+      await gmailRequest(() =>
+        gmail.users.messages.trash({
+          userId: "me",
+          id,
+        }),
+      );
+      logAudit("delete", id, "success");
+      return `Email ${id} deleted successfully.`;
+    } catch (error) {
+      logAudit("delete", id, "failure", (error as Error).message);
+      throw error;
+    }
   },
   {
     name: "delete_email",
@@ -144,17 +163,23 @@ export const deleteEmail = tool(
 
 export const spamEmail = tool(
   async ({ id }) => {
-    await gmailRequest(() =>
-      gmail.users.messages.modify({
-        userId: "me",
-        id,
-        requestBody: {
-          addLabelIds: ["SPAM"],
-          removeLabelIds: ["INBOX"],
-        },
-      }),
-    );
-    return `Email ${id} marked as spam successfully.`;
+    try {
+      await gmailRequest(() =>
+        gmail.users.messages.modify({
+          userId: "me",
+          id,
+          requestBody: {
+            addLabelIds: ["SPAM"],
+            removeLabelIds: ["INBOX"],
+          },
+        }),
+      );
+      logAudit("spam", id, "success");
+      return `Email ${id} marked as spam successfully.`;
+    } catch (error) {
+      logAudit("spam", id, "failure", (error as Error).message);
+      throw error;
+    }
   },
   {
     name: "spam_email",

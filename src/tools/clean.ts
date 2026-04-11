@@ -1,34 +1,40 @@
 import { HumanMessage, tool, AIMessageChunk } from "langchain";
 import { cleanAgent } from "../agents/clean.ts";
 import z from "zod";
+import { logger } from "../logger.ts";
 
 const LOG_TOOL_CALLS = false;
 
 export const cleanEmail = tool(
   async ({ request }) => {
-    const stream = await cleanAgent.stream(
-      { messages: [new HumanMessage(request)] },
-      { recursionLimit: 150, streamMode: "messages" },
-    );
+    try {
+      const stream = await cleanAgent.stream(
+        { messages: [new HumanMessage(request)] },
+        { recursionLimit: 150, streamMode: "messages" },
+      );
 
-    let lastText = "";
+      let lastText = "";
 
-    for await (const [message] of stream) {
-      if (!(message instanceof AIMessageChunk)) continue;
+      for await (const [message] of stream) {
+        if (!(message instanceof AIMessageChunk)) continue;
 
-      if (LOG_TOOL_CALLS && message.tool_calls?.length) {
-        for (const tc of message.tool_calls) {
-          console.log(`  tool call: ${tc.name}(${JSON.stringify(tc.args)})`);
+        if (LOG_TOOL_CALLS && message.tool_calls?.length) {
+          for (const tc of message.tool_calls) {
+            logger.debug({ tool: tc.name, args: tc.args }, "Agent tool call");
+          }
+        }
+
+        if (message.text) {
+          lastText += message.text;
         }
       }
 
-      if (message.text) {
-        lastText += message.text;
-      }
+      if (lastText) process.stdout.write("\n");
+      return "Email cleanup complete. Results already displayed to user.";
+    } catch (error) {
+      logger.error({ err: error }, "Clean agent failed");
+      return `Email cleanup failed: ${(error as Error).message}`;
     }
-
-    if (lastText) process.stdout.write("\n");
-    return "Email cleanup complete. Results already displayed to user.";
   },
   {
     name: "clean_email",

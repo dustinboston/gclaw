@@ -1,26 +1,33 @@
 import { HumanMessage, tool, AIMessageChunk } from "langchain";
 import z from "zod";
 import { tasks } from "../providers/tasks.ts";
+import { loadConfig } from "../config.ts";
+import { logger } from "../logger.ts";
 
 export const manageTasks = tool(
   async ({ request }) => {
-    const { tasksAgent } = await import("../agents/tasks.ts");
-    const stream = await tasksAgent.stream(
-      { messages: [new HumanMessage(request)] },
-      { recursionLimit: 50, streamMode: "messages" },
-    );
+    try {
+      const { tasksAgent } = await import("../agents/tasks.ts");
+      const stream = await tasksAgent.stream(
+        { messages: [new HumanMessage(request)] },
+        { recursionLimit: 50, streamMode: "messages" },
+      );
 
-    let lastText = "";
+      let lastText = "";
 
-    for await (const [message] of stream) {
-      if (!(message instanceof AIMessageChunk)) continue;
-      if (message.text) {
-        lastText += message.text;
+      for await (const [message] of stream) {
+        if (!(message instanceof AIMessageChunk)) continue;
+        if (message.text) {
+          lastText += message.text;
+        }
       }
-    }
 
-    if (lastText) process.stdout.write("\n");
-    return "Task request complete. Results already displayed to user.";
+      if (lastText) process.stdout.write("\n");
+      return "Task request complete. Results already displayed to user.";
+    } catch (error) {
+      logger.error({ err: error }, "Tasks agent failed");
+      return `Task request failed: ${(error as Error).message}`;
+    }
   },
   {
     name: "manage_tasks",
@@ -131,8 +138,9 @@ export const updateTask = tool(
 
 export const createTask = tool(
   async ({ title, notes, listId }) => {
+    const config = loadConfig();
     await tasks.tasks.insert({
-      tasklist: listId ?? "@default",
+      tasklist: listId ?? config.defaultTaskListId,
       requestBody: {
         title,
         notes,

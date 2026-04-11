@@ -31,6 +31,41 @@ vi.mock("node:fs", () => ({
   writeFileSync: mockWriteFileSync,
 }));
 
+vi.mock("../crypto.ts", () => ({
+  encrypt: vi.fn((plaintext: string) => ({
+    encrypted: true,
+    salt: "aa",
+    iv: "bb",
+    authTag: "cc",
+    data: plaintext,
+  })),
+  decrypt: vi.fn((payload: any) => payload.data),
+  isEncrypted: vi.fn((data: any) => data?.encrypted === true),
+}));
+
+vi.mock("../retry.ts", () => ({
+  withRetry: vi.fn((fn: () => any) => fn()),
+}));
+
+vi.mock("../logger.ts", () => ({
+  logger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+vi.mock("../config.ts", () => ({
+  loadConfig: () => ({
+    googleClientId: "test-id",
+    googleClientSecret: "test-secret",
+    oauthRedirectUrl: "http://localhost:3000",
+    gmailMaxConcurrent: 2,
+    tokenEncryptionKey: "test-key",
+  }),
+}));
+
 import { gmailRequest, auth, gmail } from "./gmail.ts";
 
 describe("auth setup", () => {
@@ -45,7 +80,7 @@ describe("auth setup", () => {
 });
 
 describe("token refresh handler", () => {
-  it("merges new tokens with existing", () => {
+  it("merges new tokens with existing and encrypts", () => {
     mockExistsSync.mockReturnValue(true);
     mockReadFileSync.mockReturnValue(
       JSON.stringify({ refresh_token: "old" }),
@@ -54,18 +89,20 @@ describe("token refresh handler", () => {
     handler({ access_token: "new" });
     expect(mockWriteFileSync).toHaveBeenCalledWith(
       expect.any(String),
-      JSON.stringify({ refresh_token: "old", access_token: "new" }),
+      expect.any(String),
     );
+    // Verify the write contains encrypted payload
+    const written = JSON.parse(mockWriteFileSync.mock.calls.at(-1)![1]);
+    expect(written.encrypted).toBe(true);
   });
 
   it("writes new tokens when no existing file", () => {
     mockExistsSync.mockReturnValue(false);
     const handler = mockOn.mock.calls.find((c: any) => c[0] === "tokens")![1];
     handler({ access_token: "fresh" });
-    expect(mockWriteFileSync).toHaveBeenCalledWith(
-      expect.any(String),
-      JSON.stringify({ access_token: "fresh" }),
-    );
+    expect(mockWriteFileSync).toHaveBeenCalled();
+    const written = JSON.parse(mockWriteFileSync.mock.calls.at(-1)![1]);
+    expect(written.encrypted).toBe(true);
   });
 });
 
