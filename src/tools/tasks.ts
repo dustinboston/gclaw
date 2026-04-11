@@ -3,6 +3,7 @@ import z from "zod";
 import { tasks } from "../providers/tasks.ts";
 import { loadConfig } from "../config.ts";
 import { logger } from "../logger.ts";
+import { withMetrics } from "../metrics.ts";
 
 export const manageTasks = tool(
   async ({ request }) => {
@@ -45,30 +46,32 @@ export const manageTasks = tool(
 
 export const listTasks = tool(
   async ({ showCompleted, maxResults }) => {
-    const listsRes = await tasks.tasklists.list();
-    const taskLists = listsRes.data.items ?? [];
+    return withMetrics("tasks_api", async () => {
+      const listsRes = await tasks.tasklists.list();
+      const taskLists = listsRes.data.items ?? [];
 
-    const allTasks = await Promise.all(
-      taskLists.map(async (tl) => {
-        const res = await tasks.tasks.list({
-          tasklist: tl.id!,
-          showCompleted,
-          showHidden: showCompleted,
-          maxResults,
-        });
-        return (res.data.items ?? []).map((t) => ({
-          id: t.id,
-          list: tl.title,
-          listId: tl.id,
-          title: t.title,
-          notes: t.notes ?? "",
-          status: t.status,
-          due: t.due ?? null,
-        }));
-      }),
-    );
+      const allTasks = await Promise.all(
+        taskLists.map(async (tl) => {
+          const res = await tasks.tasks.list({
+            tasklist: tl.id!,
+            showCompleted,
+            showHidden: showCompleted,
+            maxResults,
+          });
+          return (res.data.items ?? []).map((t) => ({
+            id: t.id,
+            list: tl.title,
+            listId: tl.id,
+            title: t.title,
+            notes: t.notes ?? "",
+            status: t.status,
+            due: t.due ?? null,
+          }));
+        }),
+      );
 
-    return JSON.stringify(allTasks.flat());
+      return JSON.stringify(allTasks.flat());
+    });
   },
   {
     name: "list_tasks",
@@ -89,14 +92,16 @@ export const listTasks = tool(
 
 export const completeTask = tool(
   async ({ id, listId }) => {
-    await tasks.tasks.patch({
-      tasklist: listId,
-      task: id,
-      requestBody: {
-        status: "completed",
-      },
+    return withMetrics("tasks_api", async () => {
+      await tasks.tasks.patch({
+        tasklist: listId,
+        task: id,
+        requestBody: {
+          status: "completed",
+        },
+      });
+      return `Task ${id} marked as completed.`;
     });
-    return `Task ${id} marked as completed.`;
   },
   {
     name: "complete_task",
@@ -111,16 +116,18 @@ export const completeTask = tool(
 
 export const updateTask = tool(
   async ({ id, listId, title, notes, due }) => {
-    const body: Record<string, string> = {};
-    if (title !== undefined) body.title = title;
-    if (notes !== undefined) body.notes = notes;
-    if (due !== undefined) body.due = due;
-    await tasks.tasks.patch({
-      tasklist: listId,
-      task: id,
-      requestBody: body,
+    return withMetrics("tasks_api", async () => {
+      const body: Record<string, string> = {};
+      if (title !== undefined) body.title = title;
+      if (notes !== undefined) body.notes = notes;
+      if (due !== undefined) body.due = due;
+      await tasks.tasks.patch({
+        tasklist: listId,
+        task: id,
+        requestBody: body,
+      });
+      return `Task ${id} updated.`;
     });
-    return `Task ${id} updated.`;
   },
   {
     name: "update_task",
@@ -138,15 +145,17 @@ export const updateTask = tool(
 
 export const createTask = tool(
   async ({ title, notes, listId }) => {
-    const config = loadConfig();
-    await tasks.tasks.insert({
-      tasklist: listId ?? config.defaultTaskListId,
-      requestBody: {
-        title,
-        notes,
-      },
+    return withMetrics("tasks_api", async () => {
+      const config = loadConfig();
+      await tasks.tasks.insert({
+        tasklist: listId ?? config.defaultTaskListId,
+        requestBody: {
+          title,
+          notes,
+        },
+      });
+      return `Task "${title}" created successfully.`;
     });
-    return `Task "${title}" created successfully.`;
   },
   {
     name: "create_task",

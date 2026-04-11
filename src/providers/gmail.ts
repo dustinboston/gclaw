@@ -5,6 +5,7 @@ import { encrypt, decrypt, isEncrypted } from "../crypto.ts";
 import { withRetry } from "../retry.ts";
 import { logger } from "../logger.ts";
 import { loadConfig } from "../config.ts";
+import { withMetrics } from "../metrics.ts";
 
 const config = loadConfig();
 const TOKENS_PATH = join(import.meta.dirname, "../../.tokens.json");
@@ -62,7 +63,7 @@ function release() {
 export async function gmailRequest<T>(fn: () => Promise<T>): Promise<T> {
   await acquire();
   try {
-    return await withRetry(fn);
+    return await withMetrics("gmail_api", () => withRetry(fn));
   } finally {
     release();
   }

@@ -3,6 +3,7 @@ import z from "zod";
 import { calendar } from "../providers/calendar.ts";
 import { loadConfig } from "../config.ts";
 import { logger } from "../logger.ts";
+import { withMetrics } from "../metrics.ts";
 
 export const manageCalendar = tool(
   async ({ request }) => {
@@ -45,34 +46,36 @@ export const manageCalendar = tool(
 
 export const listEvents = tool(
   async ({ timeMin, timeMax, maxResults }) => {
-    const calendarsRes = await calendar.calendarList.list();
-    const calendarIds = (calendarsRes.data.items ?? []).map((c) => c.id!);
+    return withMetrics("calendar_api", async () => {
+      const calendarsRes = await calendar.calendarList.list();
+      const calendarIds = (calendarsRes.data.items ?? []).map((c) => c.id!);
 
-    const allEvents = await Promise.all(
-      calendarIds.map(async (calendarId) => {
-        const res = await calendar.events.list({
-          calendarId,
-          timeMin,
-          timeMax,
-          maxResults,
-          singleEvents: true,
-          orderBy: "startTime",
-        });
-        return (res.data.items ?? []).map((e) => ({
-          id: e.id,
-          calendar: e.organizer?.displayName ?? calendarId,
-          summary: e.summary,
-          start: e.start?.dateTime ?? e.start?.date,
-          end: e.end?.dateTime ?? e.end?.date,
-        }));
-      }),
-    );
+      const allEvents = await Promise.all(
+        calendarIds.map(async (calendarId) => {
+          const res = await calendar.events.list({
+            calendarId,
+            timeMin,
+            timeMax,
+            maxResults,
+            singleEvents: true,
+            orderBy: "startTime",
+          });
+          return (res.data.items ?? []).map((e) => ({
+            id: e.id,
+            calendar: e.organizer?.displayName ?? calendarId,
+            summary: e.summary,
+            start: e.start?.dateTime ?? e.start?.date,
+            end: e.end?.dateTime ?? e.end?.date,
+          }));
+        }),
+      );
 
-    const events = allEvents.flat().sort((a, b) =>
-      (a.start ?? "").localeCompare(b.start ?? ""),
-    );
+      const events = allEvents.flat().sort((a, b) =>
+        (a.start ?? "").localeCompare(b.start ?? ""),
+      );
 
-    return JSON.stringify(events);
+      return JSON.stringify(events);
+    });
   },
   {
     name: "list_events",
@@ -95,17 +98,19 @@ export const listEvents = tool(
 
 export const createEvent = tool(
   async ({ summary, description, startDateTime, endDateTime }) => {
-    const config = loadConfig();
-    await calendar.events.insert({
-      calendarId: config.defaultCalendarId,
-      requestBody: {
-        summary,
-        description,
-        start: { dateTime: startDateTime },
-        end: { dateTime: endDateTime },
-      },
+    return withMetrics("calendar_api", async () => {
+      const config = loadConfig();
+      await calendar.events.insert({
+        calendarId: config.defaultCalendarId,
+        requestBody: {
+          summary,
+          description,
+          start: { dateTime: startDateTime },
+          end: { dateTime: endDateTime },
+        },
+      });
+      return `Event "${summary}" created successfully.`;
     });
-    return `Event "${summary}" created successfully.`;
   },
   {
     name: "create_event",

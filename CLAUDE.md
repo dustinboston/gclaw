@@ -20,7 +20,7 @@ pnpm typecheck        # Type-check without emitting
 
 Requires a `.env` file with: `OPENAI_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`. Google OAuth tokens are stored encrypted in `.tokens.json` (created by `pnpm authorize`). Generate an encryption key with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. If you get `invalid_grant`, re-run `pnpm authorize`.
 
-Optional env vars (with defaults): `LOG_LEVEL` (`info`), `OPENAI_MODEL` (`gpt-5.4`), `OAUTH_REDIRECT_URL` (`http://localhost:3000`), `OAUTH_PORT` (`3000`), `GMAIL_MAX_CONCURRENT` (`2`), `DEFAULT_CALENDAR_ID` (`primary`), `DEFAULT_TASK_LIST_ID` (`@default`). All config is validated at startup via Zod in `src/config.ts`.
+Optional env vars (with defaults): `LOG_LEVEL` (`info`), `LOG_FILE` (`winbox.log`), `OPENAI_MODEL` (`gpt-5.4`), `OAUTH_REDIRECT_URL` (`http://localhost:3000`), `OAUTH_PORT` (`3000`), `GMAIL_MAX_CONCURRENT` (`2`), `DEFAULT_CALENDAR_ID` (`primary`), `DEFAULT_TASK_LIST_ID` (`@default`). All config is validated at startup via Zod in `src/config.ts`.
 
 ## Architecture
 
@@ -35,7 +35,9 @@ Optional env vars (with defaults): `LOG_LEVEL` (`info`), `OPENAI_MODEL` (`gpt-5.
 - `src/crypto.ts` — AES-256-GCM encryption/decryption for token storage, keyed by `TOKEN_ENCRYPTION_KEY`
 - `src/retry.ts` — exponential backoff with jitter for transient API failures (429, 5xx, network errors)
 - `src/audit.ts` — structured audit log for destructive email operations (archive, delete, spam) written to `audit.log`
-- `src/logger.ts` — structured logging via pino (writes to stderr), configurable with `LOG_LEVEL`
+- `src/logger.ts` — structured logging via pino (writes to `winbox.log`), configurable with `LOG_LEVEL` and `LOG_FILE`
+- `src/context.ts` — `AsyncLocalStorage`-based request context; assigns a UUID `requestId` per user request, auto-injected into all pino log lines
+- `src/metrics.ts` — in-memory metrics collection for tool/API call latency, success/failure rates; `withMetrics()` wrapper and `logMetricsSummary()` for periodic reporting
 - `src/config.ts` — centralized Zod-validated config from env vars, with defaults. Fails fast on missing required vars.
 - `src/model.ts` — shared OpenAI model instance used by both agents
 - `src/tools/` — each file exports one LangChain tool wrapping a Gmail API call

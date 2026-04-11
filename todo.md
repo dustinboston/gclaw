@@ -18,11 +18,11 @@ Here's a comprehensive breakdown of what this codebase needs for enterprise read
 - No circuit breaker pattern for rate limiting
 - No validation of LLM agent outputs before acting on them
 
-### 3. Observability (Logging, Metrics, Tracing)
-- No structured logging library (needs `pino` or `winston`)
-- No request/correlation IDs for multi-step agent operations
-- No metrics (tool latency, success rates, API call counts)
-- No audit trail for destructive actions (delete, spam, archive)
+### 3. ~~Observability (Logging, Metrics, Tracing)~~ ✅
+- ~~No structured logging library (needs `pino` or `winston`)~~ — `pino` in `src/logger.ts`
+- ~~No request/correlation IDs for multi-step agent operations~~ — `AsyncLocalStorage` context in `src/context.ts`, auto-injected via pino mixin
+- ~~No metrics (tool latency, success rates, API call counts)~~ — `src/metrics.ts` with `withMetrics` wrapper on all API providers
+- ~~No audit trail for destructive actions (delete, spam, archive)~~ — `src/audit.ts` with requestId correlation
 
 ### 4. Destructive Operation Safeguards
 - `cleanAgent` autonomously deletes/archives/spams emails with zero user confirmation

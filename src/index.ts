@@ -12,6 +12,8 @@ import { manageTasks } from "./tools/tasks.ts";
 import { model } from "./model.ts";
 import { loadAgentsFile } from "./agents-file.ts";
 import { logger } from "./logger.ts";
+import { runWithContext } from "./context.ts";
+import { logMetricsSummary } from "./metrics.ts";
 
 // Setup
 // ----------------------------------------------------------------------------
@@ -75,23 +77,29 @@ while (true) {
   if (!trimmed) continue;
   if (trimmed.toLowerCase() === "exit") break;
 
-  try {
-    const stream = await supervisorAgent.stream(
-      { messages: [new HumanMessage(trimmed)] },
-      { ...config, streamMode: "messages" },
-    );
+  await runWithContext(async () => {
+    try {
+      logger.info({ input: trimmed }, "User request");
 
-    for await (const [message] of stream) {
-      if (message instanceof AIMessageChunk && message.text) {
-        process.stdout.write(message.text);
+      const stream = await supervisorAgent.stream(
+        { messages: [new HumanMessage(trimmed)] },
+        { ...config, streamMode: "messages" },
+      );
+
+      for await (const [message] of stream) {
+        if (message instanceof AIMessageChunk && message.text) {
+          process.stdout.write(message.text);
+        }
       }
-    }
 
-    process.stdout.write("\n\n");
-  } catch (error) {
-    logger.error({ err: error }, "Agent error");
-    console.error(`\nError: ${(error as Error).message}\n`);
-  }
+      process.stdout.write("\n\n");
+    } catch (error) {
+      logger.error({ err: error }, "Agent error");
+      console.error(`\nError: ${(error as Error).message}\n`);
+    } finally {
+      logMetricsSummary();
+    }
+  });
 }
 
 rl.close();

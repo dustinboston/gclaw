@@ -3,3 +3,4 @@ node_modules
 .tokens.json
 coverage
 audit.log
+winbox.log

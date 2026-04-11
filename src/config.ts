@@ -12,6 +12,7 @@ const ENV_VAR_NAMES: Record<string, string> = {
   defaultCalendarId: "DEFAULT_CALENDAR_ID",
   defaultTaskListId: "DEFAULT_TASK_LIST_ID",
   logLevel: "LOG_LEVEL",
+  logFile: "LOG_FILE",
 };
 
 const configSchema = z.object({
@@ -33,6 +34,7 @@ const configSchema = z.object({
   defaultCalendarId: z.string().default("primary"),
   defaultTaskListId: z.string().default("@default"),
   logLevel: z.string().default("info"),
+  logFile: z.string().default("winbox.log"),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -54,6 +56,7 @@ export function loadConfig(): Config {
     defaultCalendarId: process.env.DEFAULT_CALENDAR_ID,
     defaultTaskListId: process.env.DEFAULT_TASK_LIST_ID,
     logLevel: process.env.LOG_LEVEL,
+    logFile: process.env.LOG_FILE,
   });
 
   if (!result.success) {
