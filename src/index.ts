@@ -19,6 +19,7 @@ import {logger} from './logger.ts';
 import {runWithContext} from './context.ts';
 import {logMetricsSummary, getAnalytics} from './metrics.ts';
 import {createSession, listSessions} from './session.ts';
+import {startCronJobs, stopCronJobs} from './cron.ts';
 import {pool, initDatabase} from './providers/database.ts';
 import {
 	gmailListEmail,
@@ -61,7 +62,9 @@ await checkpointer.setup();
 const systemPrompt = `
 You are a helpful personal assistant. You help the user manage their email, calendar, tasks, and Google Drive.
 
-Today's date is ${new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}.
+Today's date is ${new Date().toLocaleDateString('en-US', {
+	weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+})}.
 
 # Tools
 
@@ -140,6 +143,8 @@ const agent = createDeepAgent({
 	checkpointer,
 });
 
+startCronJobs(agent);
+
 // Helpers
 // ----------------------------------------------------------------------------
 
@@ -168,6 +173,42 @@ function truncate(text: string, max = 120): string {
 	return text.length > max ? text.slice(0, max - 3) + '...' : text;
 }
 
+async function printAnalytics(): Promise<void> {
+	try {
+		const rows = await getAnalytics();
+		if (rows.length === 0) {
+			console.log('No analytics data in the last 24 hours.\n');
+			return;
+		}
+
+		console.log('Usage analytics (last 24h):');
+		for (const r of rows) {
+			console.log(`  ${r.tool}: ${r.totalCalls} calls (${r.successes} ok, ${r.failures} failed) avg ${r.avgDurationMs}ms [${r.minDurationMs}–${r.maxDurationMs}ms]`);
+		}
+
+		console.log();
+	} catch (error) {
+		logger.error({err: error}, 'Failed to fetch analytics');
+		console.log('Failed to fetch analytics.\n');
+	}
+}
+
+function renderAiChunk(message: AIMessageChunk, seen: Set<string>): void {
+	if (message.text) {
+		process.stdout.write(message.text);
+	}
+
+	for (const call of message.tool_calls ?? []) {
+		if (!call.id || seen.has(call.id)) {
+			continue;
+		}
+
+		seen.add(call.id);
+		const args = JSON.stringify(call.args ?? {});
+		process.stdout.write(`\n[tool] ${call.name} ${truncate(args)}\n`);
+	}
+}
+
 // Interactive loop
 // ----------------------------------------------------------------------------
 
@@ -178,7 +219,9 @@ const historyFile = new URL('../.command_history', import.meta.url);
 let history: string[] = [];
 try {
 	history = readFileSync(historyFile, 'utf8').split('\n').filter(Boolean);
-} catch {}
+} catch {
+	history = [];
+}
 
 const rl = readline.createInterface({
 	input: process.stdin,
@@ -226,24 +269,8 @@ while (true) {
 	}
 
 	if (trimmed === '/analytics') {
-		try {
-			// eslint-disable-next-line no-await-in-loop
-			const rows = await getAnalytics();
-			if (rows.length === 0) {
-				console.log('No analytics data in the last 24 hours.\n');
-			} else {
-				console.log('Usage analytics (last 24h):');
-				for (const r of rows) {
-					console.log(`  ${r.tool}: ${r.totalCalls} calls (${r.successes} ok, ${r.failures} failed) avg ${r.avgDurationMs}ms [${r.minDurationMs}–${r.maxDurationMs}ms]`);
-				}
-
-				console.log();
-			}
-		} catch (error) {
-			logger.error({err: error}, 'Failed to fetch analytics');
-			console.log('Failed to fetch analytics.\n');
-		}
-
+		// eslint-disable-next-line no-await-in-loop
+		await printAnalytics();
 		continue;
 	}
 
@@ -282,19 +309,8 @@ while (true) {
 			const seenToolCalls = new Set<string>();
 			for await (const [message] of stream) {
 				if (message instanceof AIMessageChunk) {
-					if (message.text) {
-						process.stdout.write(message.text);
-					}
-
-					for (const call of message.tool_calls ?? []) {
-						if (!call.id || seenToolCalls.has(call.id)) {
-							continue;
-						}
-
-						seenToolCalls.add(call.id);
-						const args = JSON.stringify(call.args ?? {});
-						process.stdout.write(`\n[tool] ${call.name} ${truncate(args)}\n`);
-					}
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+					renderAiChunk(message, seenToolCalls);
 				} else if (message instanceof ToolMessage) {
 					const content = typeof message.content === 'string'
 						? message.content
@@ -315,4 +331,5 @@ while (true) {
 }
 
 rl.close();
+stopCronJobs();
 await pool.end();

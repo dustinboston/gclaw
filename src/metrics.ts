@@ -58,7 +58,7 @@ export function recordToolCall(
 		`INSERT INTO analytics (request_id, tool, duration_ms, success)
 		 VALUES ($1, $2, $3, $4)`,
 		[requestId, name, Math.round(durationMs), success],
-	).catch(error => {
+	).catch((error: unknown) => {
 		logger.error({err: error, tool: name}, 'Failed to write analytics');
 	});
 }

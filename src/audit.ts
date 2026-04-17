@@ -15,12 +15,12 @@ import {pool} from './providers/database.ts';
 export type AuditResource = 'email' | 'drive';
 
 /** Destructive or undo operations that are recorded in the audit log. */
-export type AuditAction =
+export type AuditAction
 	// Email
-	| 'archive' | 'delete' | 'spam' | 'unarchive' | 'undelete' | 'unspam'
+	= | 'archive' | 'delete' | 'spam' | 'unarchive' | 'undelete' | 'unspam'
 	// Drive
-	| 'trash_file' | 'untrash_file' | 'move_file' | 'rename_file'
-	| 'create_folder' | 'upload_file';
+		| 'trash_file' | 'untrash_file' | 'move_file' | 'rename_file'
+		| 'create_folder' | 'upload_file';
 
 /**
  * Optional metadata attached to an audit log entry. For email: `subject`
@@ -41,6 +41,7 @@ export type AuditMetadata = {
  * @param errorOrMetadata - Either an error message string (for failures) or
  *   an {@link AuditMetadata} object with subject/from/reason.
  */
+// eslint-disable-next-line max-params
 export async function logAudit(
 	resource: AuditResource,
 	action: AuditAction,
@@ -74,8 +75,12 @@ export async function logAudit(
 			[timestamp, requestId, resource, action, resourceId, result, subject, from, reason, error],
 		);
 	} catch (writeError) {
-		logger.error({err: writeError, resource, action, resourceId}, 'Failed to write audit log');
+		logger.error({
+			err: writeError, resource, action, resourceId,
+		}, 'Failed to write audit log');
 	}
 
-	logger.info({resource, action, resourceId, result}, 'Audit: action recorded');
+	logger.info({
+		resource, action, resourceId, result,
+	}, 'Audit: action recorded');
 }

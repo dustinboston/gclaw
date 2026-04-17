@@ -6,3 +6,4 @@ bin
 audit.log
 gclaw.log
 .command_history
+cron.json

@@ -10,6 +10,7 @@ G-Claw is an AI personal assistant built with Node.js, TypeScript, and [Deep Age
 - **Skills** — multi-step workflows (like inbox cleanup) live in `skills/<name>/SKILL.md`. Add or tune a workflow by editing Markdown; no code changes required.
 - **Destructive Operation Safeguards** — undo tools for every destructive action (`gmail_unarchive_email`, `gmail_undelete_email`, `gmail_unspam_email`, `drive_untrash_file`) and a structured audit log with resource metadata and reasons.
 - **Persistent sessions** — conversation state is stored in PostgreSQL via LangGraph's `PostgresSaver`. Commands `/new`, `/sessions`, `/resume <id>` let you switch between conversations.
+- **Scheduled tasks** — declare recurring agent prompts in `cron.json` (e.g. a nightly "dream"). Jobs fire in-process via `node-cron` while `pnpm start` is running; each job runs in its own checkpointed session.
 - **Observability** — structured logging (pino), request correlation IDs, per-tool metrics, analytics persistence, and `/analytics` for a last-24h summary.
 - **Security** — AES-256-GCM encrypted token storage, Zod-validated config, exponential backoff with jitter for API retries.
 
@@ -56,6 +57,28 @@ Inside the REPL:
 - `/resume <id>` — resume a previous session (prefix match).
 - `/analytics` — show tool usage stats from the last 24 hours.
 - `exit` — quit.
+
+## Scheduled tasks
+
+G-Claw can invoke the agent on a recurring schedule. Create `cron.json` in the project root (it's gitignored by default, since prompts may contain personal context):
+
+```json
+[
+  {
+    "name": "nightly-dream",
+    "schedule": "0 2 * * *",
+    "prompt": "Reflect on today's inbox and tasks. Write a short 'dream' — a creative, speculative note about patterns you noticed — and save it to Drive as a markdown file in the folder 'Dreams'."
+  }
+]
+```
+
+Each entry has:
+
+- `name` — stable identifier. Also used as the checkpoint `thread_id` (prefixed `cron:`), so each job's history accumulates in its own session visible via `/sessions` and `/resume cron:<name>`.
+- `schedule` — standard 5-field cron expression in the system timezone.
+- `prompt` — what the agent is asked to do.
+
+Jobs fire only while `pnpm start` is running; there is no catch-up for missed fires. Output goes to `gclaw.log` (`Cron job scheduled` / `Cron job completed` / `Cron job failed`) rather than stdout, so it doesn't interleave with the REPL prompt. Edits to `cron.json` require a process restart. A malformed `cron.json` fails startup fast with a Zod error.
 
 ## Development
 

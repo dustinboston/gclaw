@@ -55,6 +55,13 @@ All tool names use a `{product}_{action}` prefix to avoid collisions with Deep A
 
 Skills are plain Markdown files with YAML frontmatter. Adding a new skill is as simple as dropping a new `skills/<name>/SKILL.md` in place — no code changes, no sub-agent wiring.
 
+**Scheduled tasks:**
+
+- Recurring agent invocations are declared in `cron.json` at the project root (gitignored — prompts can contain personal context). Each entry is `{name, schedule, prompt}`, Zod-validated at startup. Missing file = no jobs; malformed file = fail-fast.
+- Jobs run in-process via `node-cron` (v4) while `pnpm start` is running. No catch-up for missed fires; no hot reload — edits require restart.
+- Each job uses `cron:<name>` as its `thread_id`, so its conversation history accumulates in its own session (visible via `/sessions`, resumable via `/resume cron:<name>`). `noOverlap: true` prevents a slow run from stacking on itself.
+- Output is routed to the pino logger (not stdout) to avoid clobbering the REPL prompt. Look for `Cron job scheduled` / `Cron job completed` / `Cron job failed` entries in `gclaw.log`.
+
 **Destructive operation safeguards:**
 
 - **Undo tools** — `gmail_unarchive_email` (re-adds INBOX), `gmail_undelete_email` (untrashes), `gmail_unspam_email` (removes SPAM, re-adds INBOX), `drive_untrash_file` (restores a Drive file from trash). `drive_move_file` and `drive_rename_file` record prior parent/name in the audit log so a move/rename can be undone by calling the same tool with those values. Wired into the agent's tool set.
@@ -78,6 +85,7 @@ Skills are plain Markdown files with YAML frontmatter. Adding a new skill is as 
 - `src/providers/drive.ts` — Google Drive API client with concurrency-limited rate limiter, retry logic, and metrics; exports `driveRequest()` wrapper
 - `src/providers/database.ts` — shared PostgreSQL connection pool (`pg.Pool`), `initDatabase()` for schema creation at startup. Exports `pool` used by the checkpointer, audit, and analytics systems.
 - `src/session.ts` — session management for multi-session support. `createSession()` generates new thread IDs, `listSessions()` queries checkpoint history, `sessionExists()` checks for existing sessions.
+- `src/cron.ts` — in-process cron via `node-cron`. Loads and Zod-validates `cron.json`, schedules each job with `noOverlap: true`, invokes the agent under `thread_id: cron:<name>`. Exports `startCronJobs(agent)` / `stopCronJobs()`, wired into `src/index.ts` startup and shutdown.
 - `skills/` — Markdown skills loaded by the Deep Agent backend at startup.
 - `scripts/authorize.ts` — one-time OAuth2 authorization flow (local HTTP server on port 3000)
 

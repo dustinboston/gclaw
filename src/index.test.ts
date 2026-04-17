@@ -113,6 +113,10 @@ vi.mock('./session.ts', () => ({
 	createSession: vi.fn().mockReturnValue('test-session-id'),
 	listSessions: mockListSessions,
 }));
+vi.mock('./cron.ts', () => ({
+	startCronJobs: vi.fn(),
+	stopCronJobs: vi.fn(),
+}));
 vi.mock('./config.ts', () => ({
 	loadConfig: () => ({googleAiModel: 'test-model'}),
 }));

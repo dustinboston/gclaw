@@ -16,7 +16,7 @@ function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-const FILE_FIELDS = 'id, name, mimeType, parents, modifiedTime, trashed, webViewLink';
+const fileFields = 'id, name, mimeType, parents, modifiedTime, trashed, webViewLink';
 
 /** Lists files in Drive, optionally filtered by a Drive query string. */
 export const driveListFiles = tool(
@@ -29,7 +29,7 @@ export const driveListFiles = tool(
 			drive.files.list({
 				q: effectiveQuery,
 				pageSize,
-				fields: `files(${FILE_FIELDS})`,
+				fields: `files(${fileFields})`,
 				spaces: 'drive',
 			}));
 
@@ -38,7 +38,10 @@ export const driveListFiles = tool(
 	{
 		name: 'drive_list_files',
 		description:
-      'List files and folders in Google Drive. Pass a Drive query string (e.g. "name contains \'report\'", "mimeType = \'application/vnd.google-apps.folder\'", "\'FOLDER_ID\' in parents") to filter, or omit it to list recent files. Returns id, name, mimeType, parents, modifiedTime, trashed, webViewLink.',
+			'List files and folders in Google Drive. Pass a Drive query string '
+			+ '(e.g. "name contains \'report\'", "mimeType = \'application/vnd.google-apps.folder\'", '
+			+ '"\'FOLDER_ID\' in parents") to filter, or omit it to list recent files. '
+			+ 'Returns id, name, mimeType, parents, modifiedTime, trashed, webViewLink.',
 		schema: z.object({
 			query: z
 				.string()
@@ -62,7 +65,7 @@ export const driveReadFile = tool(
 		const metaResponse = await driveRequest(async () =>
 			drive.files.get({
 				fileId: id,
-				fields: `${FILE_FIELDS}, size, createdTime, owners(displayName, emailAddress)`,
+				fields: `${fileFields}, size, createdTime, owners(displayName, emailAddress)`,
 			}));
 		const meta = metaResponse.data;
 
@@ -74,7 +77,7 @@ export const driveReadFile = tool(
 					{responseType: 'text'},
 				));
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-			body = exportResponse.data as unknown as string;
+			body = exportResponse.data as string;
 		}
 
 		return JSON.stringify({...meta, body});
@@ -82,7 +85,9 @@ export const driveReadFile = tool(
 	{
 		name: 'drive_read_file',
 		description:
-      'Read a Google Drive file\'s metadata (name, mimeType, parents, size, modifiedTime, webViewLink). For Google Docs the plain-text body is also returned under "body". Binary/unsupported files return metadata only.',
+			'Read a Google Drive file\'s metadata (name, mimeType, parents, size, modifiedTime, webViewLink). '
+			+ 'For Google Docs the plain-text body is also returned under "body". '
+			+ 'Binary/unsupported files return metadata only.',
 		schema: z.object({
 			id: z.string().describe('The file ID from drive_list_files.'),
 		}),
@@ -101,7 +106,7 @@ export const driveCreateFolder = tool(
 						mimeType: 'application/vnd.google-apps.folder',
 						parents: parentId ? [parentId] : undefined,
 					},
-					fields: FILE_FIELDS,
+					fields: fileFields,
 				}));
 			const folderId = response.data.id ?? 'unknown';
 			await logAudit('drive', 'create_folder', folderId, 'success', meta);
@@ -217,7 +222,7 @@ export const driveUploadTextFile = tool(
 						mimeType,
 						body: content,
 					},
-					fields: FILE_FIELDS,
+					fields: fileFields,
 				}));
 			const fileId = response.data.id ?? 'unknown';
 			await logAudit('drive', 'upload_file', fileId, 'success', meta);
