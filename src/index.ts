@@ -254,7 +254,7 @@ const rl = readline.createInterface({
 logger.debug('G-Claw started');
 console.log('G-Claw — your personal assistant');
 console.log(`Session: ${currentThreadId.slice(0, 8)}...`);
-console.log('Commands: /new, /sessions, /resume <id>, /analytics, exit\n');
+console.log('Commands: /new, /sessions, /resume <id>, /analytics, exit (or quit)\n');
 
 while (true) {
 	let input: string;
@@ -273,7 +273,8 @@ while (true) {
 
 	appendFileSync(historyFile, trimmed + '\n');
 
-	if (trimmed.toLowerCase() === 'exit') {
+	const lowered = trimmed.toLowerCase();
+	if (lowered === 'exit' || lowered === 'quit') {
 		break;
 	}
 
