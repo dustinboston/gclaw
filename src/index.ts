@@ -48,6 +48,13 @@ import {
 	driveTrashFile,
 	driveUntrashFile,
 } from './tools/drive.ts';
+import {
+	docsCreateDocument,
+	docsReadDocument,
+	docsAppendText,
+	docsInsertText,
+	docsReplaceText,
+} from './tools/docs.ts';
 
 // Setup
 // ----------------------------------------------------------------------------
@@ -60,7 +67,7 @@ const checkpointer = new PostgresSaver(pool);
 await checkpointer.setup();
 
 const systemPrompt = `
-You are a helpful personal assistant. You help the user manage their email, calendar, tasks, and Google Drive.
+You are a helpful personal assistant. You help the user manage their email, calendar, tasks, Google Drive, and Google Docs.
 
 Today's date is ${new Date().toLocaleDateString('en-US', {
 	weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -97,6 +104,14 @@ Today's date is ${new Date().toLocaleDateString('en-US', {
 - drive_upload_text_file — create a new text/markdown/CSV/JSON file with the given content.
 - drive_trash_file — move a file or folder to trash. Include a reason.
 - drive_untrash_file — undo a trash.
+
+## Docs management
+- docs_create_document — create a new blank Google Doc. The doc is created at the Drive root; chain with drive_move_file to place it in a folder.
+- docs_read_document — read a doc as plain text (title + body).
+- docs_append_text — append text to the end of a doc. Include explicit newlines in the text.
+- docs_insert_text — insert text at a specific Docs API index (advanced; prefer append/replace for most cases).
+- docs_replace_text — find-and-replace all occurrences of a string.
+- To rename, move, or delete a doc, use the corresponding drive_* tools (drive_rename_file, drive_move_file, drive_trash_file) with the document id.
 
 # Guidelines
 
@@ -138,6 +153,12 @@ const agent = createDeepAgent({
 		driveUploadTextFile,
 		driveTrashFile,
 		driveUntrashFile,
+		// Docs
+		docsCreateDocument,
+		docsReadDocument,
+		docsAppendText,
+		docsInsertText,
+		docsReplaceText,
 	],
 	systemPrompt,
 	checkpointer,

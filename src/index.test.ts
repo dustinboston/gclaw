@@ -97,6 +97,13 @@ vi.mock('./tools/drive.ts', () => ({
 	driveTrashFile: {},
 	driveUntrashFile: {},
 }));
+vi.mock('./tools/docs.ts', () => ({
+	docsCreateDocument: {},
+	docsReadDocument: {},
+	docsAppendText: {},
+	docsInsertText: {},
+	docsReplaceText: {},
+}));
 vi.mock('./logger.ts', () => ({
 	logger: {
 		info: vi.fn(),

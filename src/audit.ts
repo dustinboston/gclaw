@@ -1,8 +1,8 @@
 /**
  * Structured audit log for destructive operations across resources (email
- * archive/delete/spam, Drive trash/move/rename/upload) and their undo
- * counterparts. Each entry is written to the `audit_log` table in PostgreSQL
- * with resource metadata and the reason for the action.
+ * archive/delete/spam, Drive trash/move/rename/upload, Docs content edits)
+ * and their undo counterparts. Each entry is written to the `audit_log`
+ * table in PostgreSQL with resource metadata and the reason for the action.
  *
  * @module
  */
@@ -12,7 +12,7 @@ import {getRequestId} from './context.ts';
 import {pool} from './providers/database.ts';
 
 /** Resource domain an audit entry applies to. */
-export type AuditResource = 'email' | 'drive';
+export type AuditResource = 'email' | 'drive' | 'docs';
 
 /** Destructive or undo operations that are recorded in the audit log. */
 export type AuditAction
@@ -20,13 +20,17 @@ export type AuditAction
 	= | 'archive' | 'delete' | 'spam' | 'unarchive' | 'undelete' | 'unspam'
 	// Drive
 		| 'trash_file' | 'untrash_file' | 'move_file' | 'rename_file'
-		| 'create_folder' | 'upload_file';
+		| 'create_folder' | 'upload_file'
+	// Docs
+		| 'create_document' | 'append_text' | 'insert_text' | 'replace_text';
 
 /**
  * Optional metadata attached to an audit log entry. For email: `subject`
  * and `from` are the email headers. For Drive: `subject` is the file name
  * and `from` is the parent folder id (or the prior name/parent for
- * move/rename so undo is possible).
+ * move/rename so undo is possible). For Docs: `subject` is the doc title
+ * (or the replacement text for replace_text); `from` is the prior string
+ * for replace_text.
  */
 export type AuditMetadata = {
 	subject?: string;
