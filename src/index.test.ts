@@ -68,24 +68,34 @@ vi.mock('langchain', () => ({
 	},
 }));
 vi.mock('./tools/gmail.ts', () => ({
-	listEmail: {},
-	readEmail: {},
-	archiveEmail: {},
-	deleteEmail: {},
-	spamEmail: {},
-	unarchiveEmail: {},
-	undeleteEmail: {},
-	unspamEmail: {},
+	gmailListEmail: {},
+	gmailReadEmail: {},
+	gmailArchiveEmail: {},
+	gmailDeleteEmail: {},
+	gmailSpamEmail: {},
+	gmailUnarchiveEmail: {},
+	gmailUndeleteEmail: {},
+	gmailUnspamEmail: {},
 }));
 vi.mock('./tools/calendar.ts', () => ({
-	listEvents: {},
-	createEvent: {},
+	calendarListEvents: {},
+	calendarCreateEvent: {},
 }));
 vi.mock('./tools/tasks.ts', () => ({
-	listTasks: {},
-	completeTask: {},
-	updateTask: {},
-	createTask: {},
+	tasksListTasks: {},
+	tasksCompleteTask: {},
+	tasksUpdateTask: {},
+	tasksCreateTask: {},
+}));
+vi.mock('./tools/drive.ts', () => ({
+	driveListFiles: {},
+	driveReadFile: {},
+	driveCreateFolder: {},
+	driveMoveFile: {},
+	driveRenameFile: {},
+	driveUploadTextFile: {},
+	driveTrashFile: {},
+	driveUntrashFile: {},
 }));
 vi.mock('./logger.ts', () => ({
 	logger: {

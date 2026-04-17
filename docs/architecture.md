@@ -51,7 +51,7 @@ description: Use this skill to clean up your email inbox ...
 ---
 
 ## Email Cleanup Workflow (follow these steps exactly)
-Step 1: Call list_email ...
+Step 1: Call gmail_list_email ...
 ```
 
 The Deep Agent's skill middleware scans `skills: ["/skills/"]` at startup. When the user asks to "clean up my inbox," the agent matches the skill's description and follows the workflow inside the Markdown.
@@ -73,12 +73,14 @@ src/
   session.ts            Session management (PostgresSaver thread IDs)
   tools/
     gmail.ts            Gmail tools (list/read/archive/delete/spam + undos)
-    calendar.ts         Calendar tools (list_events, create_event)
+    calendar.ts         Calendar tools (calendar_list_events, calendar_create_event)
+    drive.ts            Drive tools (list/read/create_folder/move/rename/upload/trash + untrash)
     tasks.ts            Tasks tools (list/create/complete/update)
   providers/
     gmail.ts            Gmail API client, OAuth, rate limiter
     calendar.ts         Calendar API client, rate limiter
     tasks.ts            Tasks API client, rate limiter
+    drive.ts            Drive API client, rate limiter
     database.ts         Shared pg.Pool + initDatabase()
 skills/
   cleanup-inbox/
@@ -97,7 +99,7 @@ scripts/
 6. Each tool call goes through: `providerRequest()` -> `withMetrics()` -> `withRetry()` -> Google API.
 7. The REPL streams two kinds of output to stdout:
    - `AIMessageChunk.text` — the assistant's prose response, printed as it arrives.
-   - Tool-call previews — truncated JSON for each `tool_calls` entry (e.g. `[tool] list_email {"label":"INBOX"}`) and `ToolMessage` results, so the user can see what the agent is doing.
+   - Tool-call previews — truncated JSON for each `tool_calls` entry (e.g. `[tool] gmail_list_email {"label":"INBOX"}`) and `ToolMessage` results, so the user can see what the agent is doing.
 8. After the request completes, `logMetricsSummary()` writes aggregated call counts, latencies, and success rates to the log.
 
 ## Cross-Cutting Concerns
@@ -163,7 +165,7 @@ Token refresh is automatic: when Google issues new tokens, the `auth.on('tokens'
 
 2. **Skills as first-class Markdown.** Multi-step workflows (like inbox cleanup) live in `skills/` as Markdown. This means a non-developer can tune the workflow without touching TypeScript, and workflows are easy to version-control and review.
 
-3. **Undo for every destructive operation.** Archive, delete, and spam each have a corresponding undo tool (`unarchive_email`, `undelete_email`, `unspam_email`). The agent has all three in its tool set so mistakes are recoverable in-conversation.
+3. **Undo for every destructive operation.** Archive, delete, spam, and trash each have a corresponding undo tool (`gmail_unarchive_email`, `gmail_undelete_email`, `gmail_unspam_email`, `drive_untrash_file`). Move/rename record prior parent/name so the same tool reverses them. The agent has these in its tool set so mistakes are recoverable in-conversation.
 
 4. **Provider-level rate limiting.** Concurrency is capped at the provider layer, not the tool layer. This means concurrent tool calls sharing the same provider still respect the limit.
 

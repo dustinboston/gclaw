@@ -11,7 +11,7 @@ import {tasks, tasksRequest} from '../providers/tasks.ts';
 import {loadConfig} from '../config.ts';
 
 /** Lists tasks across all of the user's task lists. */
-export const listTasks = tool(
+export const tasksListTasks = tool(
 	async ({showCompleted, maxResults}) => {
 		const listsResponse = await tasksRequest(async () => tasks.tasklists.list());
 		const taskLists = listsResponse.data.items ?? [];
@@ -38,7 +38,7 @@ export const listTasks = tool(
 		return JSON.stringify(allTasks.flat());
 	},
 	{
-		name: 'list_tasks',
+		name: 'tasks_list_tasks',
 		description:
       'List tasks from Google Tasks. Returns tasks with id, title, notes, status, and due date.',
 		schema: z.object({
@@ -55,7 +55,7 @@ export const listTasks = tool(
 );
 
 /** Marks a task as completed. */
-export const completeTask = tool(
+export const tasksCompleteTask = tool(
 	async ({id, listId}) => {
 		await tasksRequest(async () =>
 			tasks.tasks.patch({
@@ -68,18 +68,18 @@ export const completeTask = tool(
 		return `Task ${id} marked as completed.`;
 	},
 	{
-		name: 'complete_task',
+		name: 'tasks_complete_task',
 		description:
-      'Mark a task as completed in Google Tasks. Requires id and listId from list_tasks.',
+      'Mark a task as completed in Google Tasks. Requires id and listId from tasks_list_tasks.',
 		schema: z.object({
-			id: z.string().describe('The task ID from list_tasks'),
-			listId: z.string().describe('The task list ID from list_tasks'),
+			id: z.string().describe('The task ID from tasks_list_tasks'),
+			listId: z.string().describe('The task list ID from tasks_list_tasks'),
 		}),
 	},
 );
 
 /** Updates an existing task's title, notes, or due date. */
-export const updateTask = tool(
+export const tasksUpdateTask = tool(
 	async ({id, listId, title, notes, due}) => {
 		const body: Record<string, string> = {};
 		if (title !== undefined) {
@@ -103,12 +103,12 @@ export const updateTask = tool(
 		return `Task ${id} updated.`;
 	},
 	{
-		name: 'update_task',
+		name: 'tasks_update_task',
 		description:
-      'Update an existing task\'s title, notes, or due date. Requires id and listId from list_tasks.',
+      'Update an existing task\'s title, notes, or due date. Requires id and listId from tasks_list_tasks.',
 		schema: z.object({
-			id: z.string().describe('The task ID from list_tasks'),
-			listId: z.string().describe('The task list ID from list_tasks'),
+			id: z.string().describe('The task ID from tasks_list_tasks'),
+			listId: z.string().describe('The task list ID from tasks_list_tasks'),
 			title: z.string().optional().describe('New title for the task'),
 			notes: z.string().optional().describe('New notes for the task'),
 			due: z.string().optional().describe('New due date in ISO 8601 format (e.g. 2026-04-10T00:00:00.000Z)'),
@@ -117,7 +117,7 @@ export const updateTask = tool(
 );
 
 /** Creates a new task in Google Tasks. */
-export const createTask = tool(
+export const tasksCreateTask = tool(
 	async ({title, notes, listId}) => {
 		const config = loadConfig();
 		await tasksRequest(async () =>
@@ -131,7 +131,7 @@ export const createTask = tool(
 		return `Task "${title}" created successfully.`;
 	},
 	{
-		name: 'create_task',
+		name: 'tasks_create_task',
 		description:
       'Create a task in Google Tasks. Use this when an action item needs to be tracked.',
 		schema: z.object({
@@ -142,7 +142,7 @@ export const createTask = tool(
 			listId: z
 				.string()
 				.optional()
-				.describe('Task list ID to add to (from list_tasks). Defaults to the user\'s default list.'),
+				.describe('Task list ID to add to (from tasks_list_tasks). Defaults to the user\'s default list.'),
 		}),
 	},
 );

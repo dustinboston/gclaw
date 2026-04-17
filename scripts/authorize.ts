@@ -12,6 +12,7 @@ const url = auth.generateAuthUrl({
 		'https://mail.google.com/',
 		'https://www.googleapis.com/auth/calendar',
 		'https://www.googleapis.com/auth/tasks',
+		'https://www.googleapis.com/auth/drive',
 	],
 });
 

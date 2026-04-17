@@ -32,22 +32,22 @@ vi.mock("../audit.ts", () => ({
 }));
 
 import {
-  listEmail,
-  readEmail,
-  archiveEmail,
-  deleteEmail,
-  spamEmail,
-  unarchiveEmail,
-  undeleteEmail,
-  unspamEmail,
+  gmailListEmail,
+  gmailReadEmail,
+  gmailArchiveEmail,
+  gmailDeleteEmail,
+  gmailSpamEmail,
+  gmailUnarchiveEmail,
+  gmailUndeleteEmail,
+  gmailUnspamEmail,
 } from "./gmail.ts";
 
-describe("listEmail", () => {
+describe("gmailListEmail", () => {
   it("returns messages as JSON", async () => {
     mockList.mockResolvedValue({
       data: { messages: [{ id: "1", threadId: "t1" }] },
     });
-    const result = await listEmail.invoke({ label: "INBOX", maxResults: 10 });
+    const result = await gmailListEmail.invoke({ label: "INBOX", maxResults: 10 });
     expect(mockList).toHaveBeenCalledWith({
       userId: "me",
       labelIds: ["INBOX"],
@@ -58,12 +58,12 @@ describe("listEmail", () => {
 
   it("returns empty array when no messages", async () => {
     mockList.mockResolvedValue({ data: {} });
-    const result = await listEmail.invoke({ label: "SPAM", maxResults: 5 });
+    const result = await gmailListEmail.invoke({ label: "SPAM", maxResults: 5 });
     expect(result).toBe("[]");
   });
 });
 
-describe("readEmail", () => {
+describe("gmailReadEmail", () => {
   it("extracts headers and metadata", async () => {
     mockGet.mockResolvedValue({
       data: {
@@ -82,7 +82,7 @@ describe("readEmail", () => {
       },
     });
 
-    const result = JSON.parse(await readEmail.invoke({ id: "msg1" }));
+    const result = JSON.parse(await gmailReadEmail.invoke({ id: "msg1" }));
 
     expect(mockGet).toHaveBeenCalledWith({
       userId: "me",
@@ -113,7 +113,7 @@ describe("readEmail", () => {
       },
     });
 
-    const result = JSON.parse(await readEmail.invoke({ id: "msg2" }));
+    const result = JSON.parse(await gmailReadEmail.invoke({ id: "msg2" }));
     expect(result.from).toBe("");
     expect(result.subject).toBe("");
   });
@@ -129,15 +129,15 @@ describe("readEmail", () => {
       },
     });
 
-    const result = JSON.parse(await readEmail.invoke({ id: "msg3" }));
+    const result = JSON.parse(await gmailReadEmail.invoke({ id: "msg3" }));
     expect(result.labels).toBeNull();
     expect(result.from).toBe("");
   });
 });
 
-describe("archiveEmail", () => {
+describe("gmailArchiveEmail", () => {
   it("removes INBOX label and logs audit with metadata", async () => {
-    const result = await archiveEmail.invoke({
+    const result = await gmailArchiveEmail.invoke({
       id: "msg1",
       subject: "Newsletter",
       from: "news@example.com",
@@ -149,7 +149,7 @@ describe("archiveEmail", () => {
       requestBody: { removeLabelIds: ["INBOX"] },
     });
     expect(result).toBe("Email msg1 archived successfully.");
-    expect(mockLogAudit).toHaveBeenCalledWith("archive", "msg1", "success", {
+    expect(mockLogAudit).toHaveBeenCalledWith("email", "archive", "msg1", "success", {
       subject: "Newsletter",
       from: "news@example.com",
       reason: "Newsletter — no reference value",
@@ -157,9 +157,9 @@ describe("archiveEmail", () => {
   });
 
   it("works without optional metadata", async () => {
-    const result = await archiveEmail.invoke({ id: "msg2" });
+    const result = await gmailArchiveEmail.invoke({ id: "msg2" });
     expect(result).toBe("Email msg2 archived successfully.");
-    expect(mockLogAudit).toHaveBeenCalledWith("archive", "msg2", "success", {
+    expect(mockLogAudit).toHaveBeenCalledWith("email", "archive", "msg2", "success", {
       subject: undefined,
       from: undefined,
       reason: undefined,
@@ -167,9 +167,9 @@ describe("archiveEmail", () => {
   });
 });
 
-describe("deleteEmail", () => {
+describe("gmailDeleteEmail", () => {
   it("moves message to trash and logs audit with metadata", async () => {
-    const result = await deleteEmail.invoke({
+    const result = await gmailDeleteEmail.invoke({
       id: "msg1",
       subject: "Sale!",
       from: "promo@shop.com",
@@ -177,7 +177,7 @@ describe("deleteEmail", () => {
     });
     expect(mockTrash).toHaveBeenCalledWith({ userId: "me", id: "msg1" });
     expect(result).toBe("Email msg1 deleted successfully.");
-    expect(mockLogAudit).toHaveBeenCalledWith("delete", "msg1", "success", {
+    expect(mockLogAudit).toHaveBeenCalledWith("email", "delete", "msg1", "success", {
       subject: "Sale!",
       from: "promo@shop.com",
       reason: "Promotion",
@@ -185,9 +185,9 @@ describe("deleteEmail", () => {
   });
 });
 
-describe("spamEmail", () => {
+describe("gmailSpamEmail", () => {
   it("adds SPAM label and removes INBOX label and logs audit with metadata", async () => {
-    const result = await spamEmail.invoke({
+    const result = await gmailSpamEmail.invoke({
       id: "msg1",
       subject: "You won!",
       from: "scam@bad.com",
@@ -202,7 +202,7 @@ describe("spamEmail", () => {
       },
     });
     expect(result).toBe("Email msg1 marked as spam successfully.");
-    expect(mockLogAudit).toHaveBeenCalledWith("spam", "msg1", "success", {
+    expect(mockLogAudit).toHaveBeenCalledWith("email", "spam", "msg1", "success", {
       subject: "You won!",
       from: "scam@bad.com",
       reason: "Phishing attempt",
@@ -210,31 +210,31 @@ describe("spamEmail", () => {
   });
 });
 
-describe("unarchiveEmail", () => {
+describe("gmailUnarchiveEmail", () => {
   it("adds INBOX label back and logs audit", async () => {
-    const result = await unarchiveEmail.invoke({ id: "msg1" });
+    const result = await gmailUnarchiveEmail.invoke({ id: "msg1" });
     expect(mockModify).toHaveBeenCalledWith({
       userId: "me",
       id: "msg1",
       requestBody: { addLabelIds: ["INBOX"] },
     });
     expect(result).toBe("Email msg1 moved back to inbox.");
-    expect(mockLogAudit).toHaveBeenCalledWith("unarchive", "msg1", "success");
+    expect(mockLogAudit).toHaveBeenCalledWith("email", "unarchive", "msg1", "success");
   });
 });
 
-describe("undeleteEmail", () => {
+describe("gmailUndeleteEmail", () => {
   it("restores message from trash and logs audit", async () => {
-    const result = await undeleteEmail.invoke({ id: "msg1" });
+    const result = await gmailUndeleteEmail.invoke({ id: "msg1" });
     expect(mockUntrash).toHaveBeenCalledWith({ userId: "me", id: "msg1" });
     expect(result).toBe("Email msg1 restored from trash.");
-    expect(mockLogAudit).toHaveBeenCalledWith("undelete", "msg1", "success");
+    expect(mockLogAudit).toHaveBeenCalledWith("email", "undelete", "msg1", "success");
   });
 });
 
-describe("unspamEmail", () => {
+describe("gmailUnspamEmail", () => {
   it("removes SPAM label and adds INBOX label and logs audit", async () => {
-    const result = await unspamEmail.invoke({ id: "msg1" });
+    const result = await gmailUnspamEmail.invoke({ id: "msg1" });
     expect(mockModify).toHaveBeenCalledWith({
       userId: "me",
       id: "msg1",
@@ -244,6 +244,6 @@ describe("unspamEmail", () => {
       },
     });
     expect(result).toBe("Email msg1 unmarked as spam and moved back to inbox.");
-    expect(mockLogAudit).toHaveBeenCalledWith("unspam", "msg1", "success");
+    expect(mockLogAudit).toHaveBeenCalledWith("email", "unspam", "msg1", "success");
   });
 });

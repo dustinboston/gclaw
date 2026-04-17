@@ -19,13 +19,13 @@ vi.mock("../config.ts", () => ({
   loadConfig: () => ({ defaultCalendarId: "primary" }),
 }));
 
-import { listEvents, createEvent } from "./calendar.ts";
+import { calendarListEvents, calendarCreateEvent } from "./calendar.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("listEvents", () => {
+describe("calendarListEvents", () => {
   it("fetches events from all calendars and sorts by start time", async () => {
     mockCalendarListList.mockResolvedValue({
       data: { items: [{ id: "cal1" }, { id: "cal2" }] },
@@ -59,7 +59,7 @@ describe("listEvents", () => {
       });
 
     const result = JSON.parse(
-      await listEvents.invoke({
+      await calendarListEvents.invoke({
         timeMin: "2026-04-09T00:00:00-07:00",
         timeMax: "2026-04-10T00:00:00-07:00",
         maxResults: 20,
@@ -74,7 +74,7 @@ describe("listEvents", () => {
   it("handles empty calendar list", async () => {
     mockCalendarListList.mockResolvedValue({ data: { items: undefined } });
     const result = JSON.parse(
-      await listEvents.invoke({
+      await calendarListEvents.invoke({
         timeMin: "2026-04-09T00:00:00-07:00",
         timeMax: "2026-04-10T00:00:00-07:00",
       }),
@@ -88,7 +88,7 @@ describe("listEvents", () => {
     });
     mockEventsList.mockResolvedValue({ data: { items: undefined } });
     const result = JSON.parse(
-      await listEvents.invoke({
+      await calendarListEvents.invoke({
         timeMin: "2026-04-09T00:00:00-07:00",
         timeMax: "2026-04-10T00:00:00-07:00",
       }),
@@ -114,7 +114,7 @@ describe("listEvents", () => {
       },
     });
     const result = JSON.parse(
-      await listEvents.invoke({
+      await calendarListEvents.invoke({
         timeMin: "2026-04-09T00:00:00-07:00",
         timeMax: "2026-04-10T00:00:00-07:00",
       }),
@@ -134,7 +134,7 @@ describe("listEvents", () => {
       },
     });
     const result = JSON.parse(
-      await listEvents.invoke({
+      await calendarListEvents.invoke({
         timeMin: "2026-04-09T00:00:00-07:00",
         timeMax: "2026-04-10T00:00:00-07:00",
       }),
@@ -159,7 +159,7 @@ describe("listEvents", () => {
       },
     });
     const result = JSON.parse(
-      await listEvents.invoke({
+      await calendarListEvents.invoke({
         timeMin: "2026-04-09T00:00:00-07:00",
         timeMax: "2026-04-10T00:00:00-07:00",
       }),
@@ -168,9 +168,9 @@ describe("listEvents", () => {
   });
 });
 
-describe("createEvent", () => {
+describe("calendarCreateEvent", () => {
   it("inserts event and returns success message", async () => {
-    const result = await createEvent.invoke({
+    const result = await calendarCreateEvent.invoke({
       summary: "Team Sync",
       description: "Weekly sync",
       startDateTime: "2026-04-09T10:00:00-07:00",

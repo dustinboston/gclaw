@@ -11,7 +11,7 @@ import {calendar, calendarRequest} from '../providers/calendar.ts';
 import {loadConfig} from '../config.ts';
 
 /** Lists events across all of the user's calendars in a time range. */
-export const listEvents = tool(
+export const calendarListEvents = tool(
 	async ({timeMin, timeMax, maxResults}) => {
 		const calendarsResponse = await calendarRequest(async () =>
 			calendar.calendarList.list());
@@ -54,7 +54,7 @@ export const listEvents = tool(
 		return JSON.stringify(events);
 	},
 	{
-		name: 'list_events',
+		name: 'calendar_list_events',
 		description:
       'List upcoming Google Calendar events in a time range. Use this to find open slots before creating an event.',
 		schema: z.object({
@@ -73,7 +73,7 @@ export const listEvents = tool(
 );
 
 /** Creates an event on the user's default calendar. */
-export const createEvent = tool(
+export const calendarCreateEvent = tool(
 	async ({summary, description, startDateTime, endDateTime}) => {
 		const config = loadConfig();
 		await calendarRequest(async () =>
@@ -89,9 +89,9 @@ export const createEvent = tool(
 		return `Event "${summary}" created successfully.`;
 	},
 	{
-		name: 'create_event',
+		name: 'calendar_create_event',
 		description:
-      'Create a Google Calendar event. Use list_events first to check for conflicts.',
+      'Create a Google Calendar event. Use calendar_list_events first to check for conflicts.',
 		schema: z.object({
 			summary: z.string().describe('Title of the event'),
 			description: z

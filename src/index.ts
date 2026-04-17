@@ -21,22 +21,32 @@ import {logMetricsSummary, getAnalytics} from './metrics.ts';
 import {createSession, listSessions} from './session.ts';
 import {pool, initDatabase} from './providers/database.ts';
 import {
-	listEmail,
-	readEmail,
-	archiveEmail,
-	deleteEmail,
-	spamEmail,
-	unarchiveEmail,
-	undeleteEmail,
-	unspamEmail,
+	gmailListEmail,
+	gmailReadEmail,
+	gmailArchiveEmail,
+	gmailDeleteEmail,
+	gmailSpamEmail,
+	gmailUnarchiveEmail,
+	gmailUndeleteEmail,
+	gmailUnspamEmail,
 } from './tools/gmail.ts';
-import {listEvents, createEvent} from './tools/calendar.ts';
+import {calendarListEvents, calendarCreateEvent} from './tools/calendar.ts';
 import {
-	listTasks,
-	createTask,
-	completeTask,
-	updateTask,
+	tasksListTasks,
+	tasksCreateTask,
+	tasksCompleteTask,
+	tasksUpdateTask,
 } from './tools/tasks.ts';
+import {
+	driveListFiles,
+	driveReadFile,
+	driveCreateFolder,
+	driveMoveFile,
+	driveRenameFile,
+	driveUploadTextFile,
+	driveTrashFile,
+	driveUntrashFile,
+} from './tools/drive.ts';
 
 // Setup
 // ----------------------------------------------------------------------------
@@ -49,31 +59,41 @@ const checkpointer = new PostgresSaver(pool);
 await checkpointer.setup();
 
 const systemPrompt = `
-You are a helpful personal assistant. You help the user manage their email, calendar, and tasks.
+You are a helpful personal assistant. You help the user manage their email, calendar, tasks, and Google Drive.
 
 Today's date is ${new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}.
 
 # Tools
 
 ## Email management
-- list_email — list email message IDs with a given label.
-- read_email — read email metadata (subject, sender, time, etc) by message ID.
-- archive_email — archive (removes from inbox). Include subject, from, and reason.
-- delete_email — delete (moves to trash). Include subject, from, and reason.
-- spam_email — mark as spam. Include subject, from, and reason.
-- unarchive_email — undo an archive.
-- undelete_email — undo a delete.
-- unspam_email — undo a spam.
+- gmail_list_email — list email message IDs with a given label.
+- gmail_read_email — read email metadata (subject, sender, time, etc) by message ID.
+- gmail_archive_email — archive (removes from inbox). Include subject, from, and reason.
+- gmail_delete_email — delete (moves to trash). Include subject, from, and reason.
+- gmail_spam_email — mark as spam. Include subject, from, and reason.
+- gmail_unarchive_email — undo an archive.
+- gmail_undelete_email — undo a delete.
+- gmail_unspam_email — undo a spam.
 
 ## Calendar management
-- list_events — check the calendar for open slots before scheduling.
-- create_event — create a Google Calendar event.
+- calendar_list_events — check the calendar for open slots before scheduling.
+- calendar_create_event — create a Google Calendar event.
 
 ## Task management
-- list_tasks — check existing tasks before creating new ones.
-- create_task — create a Google Tasks reminder for follow-up.
-- complete_task — mark a task as complete.
-- update_task — update a task (e.g. change title, due date).
+- tasks_list_tasks — check existing tasks before creating new ones.
+- tasks_create_task — create a Google Tasks reminder for follow-up.
+- tasks_complete_task — mark a task as complete.
+- tasks_update_task — update a task (e.g. change title, due date).
+
+## Drive management
+- drive_list_files — list files/folders, optionally with a Drive query (e.g. name contains, mimeType filter, parent-in).
+- drive_read_file — read a file's metadata (and the plain-text body for Google Docs).
+- drive_create_folder — create a new folder, optionally inside a parent.
+- drive_move_file — move a file or folder to a new parent. Prefer passing oldParentId so the move can be audit-undone.
+- drive_rename_file — rename a file or folder. The prior name is recorded for undo.
+- drive_upload_text_file — create a new text/markdown/CSV/JSON file with the given content.
+- drive_trash_file — move a file or folder to trash. Include a reason.
+- drive_untrash_file — undo a trash.
 
 # Guidelines
 
@@ -90,22 +110,31 @@ const agent = createDeepAgent({
 	skills: ['/skills/'],
 	tools: [
 		// Email
-		listEmail,
-		readEmail,
-		archiveEmail,
-		deleteEmail,
-		spamEmail,
-		unarchiveEmail,
-		undeleteEmail,
-		unspamEmail,
+		gmailListEmail,
+		gmailReadEmail,
+		gmailArchiveEmail,
+		gmailDeleteEmail,
+		gmailSpamEmail,
+		gmailUnarchiveEmail,
+		gmailUndeleteEmail,
+		gmailUnspamEmail,
 		// Calendar
-		listEvents,
-		createEvent,
+		calendarListEvents,
+		calendarCreateEvent,
 		// Tasks
-		listTasks,
-		createTask,
-		completeTask,
-		updateTask,
+		tasksListTasks,
+		tasksCreateTask,
+		tasksCompleteTask,
+		tasksUpdateTask,
+		// Drive
+		driveListFiles,
+		driveReadFile,
+		driveCreateFolder,
+		driveMoveFile,
+		driveRenameFile,
+		driveUploadTextFile,
+		driveTrashFile,
+		driveUntrashFile,
 	],
 	systemPrompt,
 	checkpointer,

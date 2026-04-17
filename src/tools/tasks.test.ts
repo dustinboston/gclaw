@@ -25,17 +25,17 @@ vi.mock("../config.ts", () => ({
 }));
 
 import {
-  listTasks,
-  completeTask,
-  updateTask,
-  createTask,
+  tasksListTasks,
+  tasksCompleteTask,
+  tasksUpdateTask,
+  tasksCreateTask,
 } from "./tasks.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("listTasks", () => {
+describe("tasksListTasks", () => {
   it("fetches tasks from all task lists", async () => {
     mockTasklistsList.mockResolvedValue({
       data: { items: [{ id: "list1", title: "My Tasks" }] },
@@ -55,7 +55,7 @@ describe("listTasks", () => {
     });
 
     const result = JSON.parse(
-      await listTasks.invoke({ showCompleted: false, maxResults: 100 }),
+      await tasksListTasks.invoke({ showCompleted: false, maxResults: 100 }),
     );
     expect(result).toEqual([
       {
@@ -73,7 +73,7 @@ describe("listTasks", () => {
   it("handles empty task lists", async () => {
     mockTasklistsList.mockResolvedValue({ data: { items: undefined } });
     const result = JSON.parse(
-      await listTasks.invoke({ showCompleted: false }),
+      await tasksListTasks.invoke({ showCompleted: false }),
     );
     expect(result).toEqual([]);
   });
@@ -84,7 +84,7 @@ describe("listTasks", () => {
     });
     mockTasksList.mockResolvedValue({ data: { items: undefined } });
     const result = JSON.parse(
-      await listTasks.invoke({ showCompleted: false }),
+      await tasksListTasks.invoke({ showCompleted: false }),
     );
     expect(result).toEqual([]);
   });
@@ -99,7 +99,7 @@ describe("listTasks", () => {
       },
     });
     const result = JSON.parse(
-      await listTasks.invoke({ showCompleted: false }),
+      await tasksListTasks.invoke({ showCompleted: false }),
     );
     expect(result[0].notes).toBe("");
     expect(result[0].due).toBeNull();
@@ -110,7 +110,7 @@ describe("listTasks", () => {
       data: { items: [{ id: "list1", title: "Tasks" }] },
     });
     mockTasksList.mockResolvedValue({ data: { items: [] } });
-    await listTasks.invoke({ showCompleted: true, maxResults: 50 });
+    await tasksListTasks.invoke({ showCompleted: true, maxResults: 50 });
     expect(mockTasksList).toHaveBeenCalledWith({
       tasklist: "list1",
       showCompleted: true,
@@ -120,9 +120,9 @@ describe("listTasks", () => {
   });
 });
 
-describe("completeTask", () => {
+describe("tasksCompleteTask", () => {
   it("patches task with completed status", async () => {
-    const result = await completeTask.invoke({ id: "t1", listId: "list1" });
+    const result = await tasksCompleteTask.invoke({ id: "t1", listId: "list1" });
     expect(mockTasksPatch).toHaveBeenCalledWith({
       tasklist: "list1",
       task: "t1",
@@ -132,9 +132,9 @@ describe("completeTask", () => {
   });
 });
 
-describe("updateTask", () => {
+describe("tasksUpdateTask", () => {
   it("patches task with all provided fields", async () => {
-    const result = await updateTask.invoke({
+    const result = await tasksUpdateTask.invoke({
       id: "t1",
       listId: "list1",
       title: "New Title",
@@ -154,7 +154,7 @@ describe("updateTask", () => {
   });
 
   it("only includes defined fields in the request body", async () => {
-    await updateTask.invoke({ id: "t1", listId: "list1", title: "Only title" });
+    await tasksUpdateTask.invoke({ id: "t1", listId: "list1", title: "Only title" });
     expect(mockTasksPatch).toHaveBeenCalledWith({
       tasklist: "list1",
       task: "t1",
@@ -163,7 +163,7 @@ describe("updateTask", () => {
   });
 
   it("sends empty body when no optional fields provided", async () => {
-    await updateTask.invoke({ id: "t1", listId: "list1" });
+    await tasksUpdateTask.invoke({ id: "t1", listId: "list1" });
     expect(mockTasksPatch).toHaveBeenCalledWith({
       tasklist: "list1",
       task: "t1",
@@ -172,9 +172,9 @@ describe("updateTask", () => {
   });
 });
 
-describe("createTask", () => {
+describe("tasksCreateTask", () => {
   it("inserts task into the specified list", async () => {
-    const result = await createTask.invoke({
+    const result = await tasksCreateTask.invoke({
       title: "Buy milk",
       notes: "2%",
       listId: "list1",
@@ -187,7 +187,7 @@ describe("createTask", () => {
   });
 
   it("uses @default when no listId provided", async () => {
-    await createTask.invoke({ title: "Something", notes: "" });
+    await tasksCreateTask.invoke({ title: "Something", notes: "" });
     expect(mockTasksInsert).toHaveBeenCalledWith({
       tasklist: "@default",
       requestBody: { title: "Something", notes: "" },

@@ -1,6 +1,8 @@
 # Tool API Reference
 
-G-Claw exposes its functionality through LangChain tools organized into three domains: Gmail, Calendar, and Tasks. Each tool is a LangChain `tool()` with a Zod-validated schema, and every tool is registered directly on the Deep Agent — there are no supervisor wrapper tools.
+G-Claw exposes its functionality through LangChain tools organized into four domains: Gmail, Calendar, Tasks, and Drive. Each tool is a LangChain `tool()` with a Zod-validated schema, and every tool is registered directly on the Deep Agent — there are no supervisor wrapper tools.
+
+All tool names follow a `{product}_{action}` convention (e.g. `gmail_list_email`, `drive_read_file`, `calendar_create_event`) so the agent's toolset stays collision-free with Deep Agents built-ins.
 
 Multi-step workflows (e.g. inbox cleanup) are expressed as Markdown skills under `skills/`, not as dedicated tools. The Deep Agent follows the matching skill based on the user request. See [architecture.md](./architecture.md#skills).
 
@@ -10,7 +12,7 @@ Multi-step workflows (e.g. inbox cleanup) are expressed as Markdown skills under
 
 Defined in `src/tools/gmail.ts`.
 
-### `list_email`
+### `gmail_list_email`
 
 List emails from a Gmail label. Returns an array of `{ id, threadId }` objects.
 
@@ -21,7 +23,7 @@ List emails from a Gmail label. Returns an array of `{ id, threadId }` objects.
 
 **Returns:** JSON array of `{ id: string, threadId: string }`.
 
-### `read_email`
+### `gmail_read_email`
 
 Read an email's metadata.
 
@@ -44,7 +46,7 @@ Read an email's metadata.
 
 **Headers requested:** `From`, `To`, `Subject`, `Date`, `List-Unsubscribe`.
 
-### `archive_email`
+### `gmail_archive_email`
 
 Archive an email by removing the `INBOX` label.
 
@@ -57,7 +59,7 @@ Archive an email by removing the `INBOX` label.
 
 **Side effects:** Writes an `archive` entry to `audit.log`.
 
-### `delete_email`
+### `gmail_delete_email`
 
 Delete an email by moving it to trash.
 
@@ -70,7 +72,7 @@ Delete an email by moving it to trash.
 
 **Side effects:** Writes a `delete` entry to `audit.log`.
 
-### `spam_email`
+### `gmail_spam_email`
 
 Mark an email as spam. Adds the `SPAM` label and removes `INBOX`.
 
@@ -83,7 +85,7 @@ Mark an email as spam. Adds the `SPAM` label and removes `INBOX`.
 
 **Side effects:** Writes a `spam` entry to `audit.log`.
 
-### `unarchive_email`
+### `gmail_unarchive_email`
 
 Undo an archive by re-adding the `INBOX` label.
 
@@ -93,7 +95,7 @@ Undo an archive by re-adding the `INBOX` label.
 
 **Side effects:** Writes an `unarchive` entry to `audit.log`.
 
-### `undelete_email`
+### `gmail_undelete_email`
 
 Undo a delete by restoring the email from trash.
 
@@ -103,7 +105,7 @@ Undo a delete by restoring the email from trash.
 
 **Side effects:** Writes an `undelete` entry to `audit.log`.
 
-### `unspam_email`
+### `gmail_unspam_email`
 
 Undo a spam action by removing `SPAM` and re-adding `INBOX`.
 
@@ -119,7 +121,7 @@ Undo a spam action by removing `SPAM` and re-adding `INBOX`.
 
 Defined in `src/tools/calendar.ts`.
 
-### `list_events`
+### `calendar_list_events`
 
 List Google Calendar events across all calendars in a time range.
 
@@ -141,7 +143,7 @@ List Google Calendar events across all calendars in a time range.
 | `start`    | `string` | Start datetime or all-day date |
 | `end`      | `string` | End datetime or all-day date   |
 
-### `create_event`
+### `calendar_create_event`
 
 Create a Google Calendar event on the default calendar.
 
@@ -160,7 +162,7 @@ Create a Google Calendar event on the default calendar.
 
 Defined in `src/tools/tasks.ts`.
 
-### `list_tasks`
+### `tasks_list_tasks`
 
 List tasks from all Google Tasks lists.
 
@@ -181,28 +183,28 @@ List tasks from all Google Tasks lists.
 | `status` | `string`           | `"needsAction"` or `"completed"` |
 | `due`    | `string` or `null` | Due date (ISO 8601) or null      |
 
-### `complete_task`
+### `tasks_complete_task`
 
 Mark a task as completed.
 
 | Parameter | Type     | Required | Description                      |
 | --------- | -------- | -------- | -------------------------------- |
-| `id`      | `string` | Yes      | Task ID (from `list_tasks`)      |
-| `listId`  | `string` | Yes      | Task list ID (from `list_tasks`) |
+| `id`      | `string` | Yes      | Task ID (from `tasks_list_tasks`) |
+| `listId`  | `string` | Yes      | Task list ID (from `tasks_list_tasks`) |
 
-### `update_task`
+### `tasks_update_task`
 
 Update an existing task's title, notes, or due date.
 
 | Parameter | Type     | Required | Description                      |
 | --------- | -------- | -------- | -------------------------------- |
-| `id`      | `string` | Yes      | Task ID (from `list_tasks`)      |
-| `listId`  | `string` | Yes      | Task list ID (from `list_tasks`) |
+| `id`      | `string` | Yes      | Task ID (from `tasks_list_tasks`) |
+| `listId`  | `string` | Yes      | Task list ID (from `tasks_list_tasks`) |
 | `title`   | `string` | No       | New title                        |
 | `notes`   | `string` | No       | New notes                        |
 | `due`     | `string` | No       | New due date (ISO 8601)          |
 
-### `create_task`
+### `tasks_create_task`
 
 Create a new task.
 
@@ -216,19 +218,20 @@ Create a new task.
 
 ## Audit Log Format
 
-All destructive email operations write one row to the PostgreSQL `audit_log` table. Each row contains:
+All destructive operations across resources (email, drive) write one row to the PostgreSQL `audit_log` table. Each row contains:
 
-| Column       | Type          | Notes                                                        |
-| ------------ | ------------- | ------------------------------------------------------------ |
-| `timestamp`  | `timestamptz` | Defaults to `NOW()`                                          |
-| `request_id` | `text`        | UUID from `AsyncLocalStorage` context                        |
-| `action`     | `text`        | `archive`, `delete`, `spam`, `unarchive`, `undelete`, `unspam` |
-| `email_id`   | `text`        | Gmail message ID                                             |
-| `result`     | `text`        | `success` or `failure`                                       |
-| `subject`    | `text`        | Email subject                                                |
-| `from`       | `text`        | Email sender                                                 |
-| `reason`     | `text`        | Why the action was taken                                     |
-| `error`      | `text`        | Error message (failure only)                                 |
+| Column        | Type          | Notes                                                        |
+| ------------- | ------------- | ------------------------------------------------------------ |
+| `timestamp`   | `timestamptz` | Defaults to `NOW()`                                          |
+| `request_id`  | `text`        | UUID from `AsyncLocalStorage` context                        |
+| `resource`    | `text`        | `email` or `drive`                                           |
+| `action`      | `text`        | `archive`, `delete`, `spam`, `unarchive`, `undelete`, `unspam`, `trash_file`, `untrash_file`, `move_file`, `rename_file`, `create_folder`, `upload_file` |
+| `resource_id` | `text`        | Gmail message ID or Drive file/folder ID                     |
+| `result`      | `text`        | `success` or `failure`                                       |
+| `subject`     | `text`        | Email subject (or Drive file name)                           |
+| `from`        | `text`        | Email sender (or Drive parent folder id / prior name)        |
+| `reason`      | `text`        | Why the action was taken                                     |
+| `error`       | `text`        | Error message (failure only)                                 |
 
 **Source:** `src/audit.ts` (schema in `src/providers/database.ts`)
 
@@ -243,6 +246,7 @@ Each Google API provider exports a request wrapper that applies rate limiting, r
 | `gmailRequest()`    | Gmail API v1    | `GMAIL_MAX_CONCURRENT`    | `2`     |
 | `calendarRequest()` | Calendar API v3 | `CALENDAR_MAX_CONCURRENT` | `2`     |
 | `tasksRequest()`    | Tasks API v1    | `TASKS_MAX_CONCURRENT`    | `2`     |
+| `driveRequest()`    | Drive API v3    | `DRIVE_MAX_CONCURRENT`    | `2`     |
 
 **Call chain:** `tool` -> `providerRequest()` -> `withMetrics()` -> `withRetry()` -> Google API.
 

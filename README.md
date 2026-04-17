@@ -2,13 +2,13 @@
 
 ![The Google "G" next to a lobster claw](./logo.png)
 
-G-Claw is an AI personal assistant built with Node.js, TypeScript, and [Deep Agents](https://github.com/langchain-ai/deepagentsjs) (LangGraph under the hood). It manages your Gmail inbox, Google Calendar, and Google Tasks through a conversational CLI, defaulting to a Gemini model.
+G-Claw is an AI personal assistant built with Node.js, TypeScript, and [Deep Agents](https://github.com/langchain-ai/deepagentsjs) (LangGraph under the hood). It manages your Gmail inbox, Google Calendar, Google Tasks, and Google Drive through a conversational CLI, defaulting to a Gemini model.
 
 ## Features
 
-- **Flat tool access** — a single Deep Agent with Gmail, Calendar, and Tasks tools decides what to call. No hand-written supervisor, no sub-agent tier.
+- **Flat tool access** — a single Deep Agent with Gmail, Calendar, Tasks, and Drive tools decides what to call. No hand-written supervisor, no sub-agent tier.
 - **Skills** — multi-step workflows (like inbox cleanup) live in `skills/<name>/SKILL.md`. Add or tune a workflow by editing Markdown; no code changes required.
-- **Destructive Operation Safeguards** — undo tools for every destructive email action (`unarchive_email`, `undelete_email`, `unspam_email`) and a structured audit log with email metadata and reasons.
+- **Destructive Operation Safeguards** — undo tools for every destructive action (`gmail_unarchive_email`, `gmail_undelete_email`, `gmail_unspam_email`, `drive_untrash_file`) and a structured audit log with resource metadata and reasons.
 - **Persistent sessions** — conversation state is stored in PostgreSQL via LangGraph's `PostgresSaver`. Commands `/new`, `/sessions`, `/resume <id>` let you switch between conversations.
 - **Observability** — structured logging (pino), request correlation IDs, per-tool metrics, analytics persistence, and `/analytics` for a last-24h summary.
 - **Security** — AES-256-GCM encrypted token storage, Zod-validated config, exponential backoff with jitter for API retries.

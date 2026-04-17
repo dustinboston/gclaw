@@ -93,14 +93,14 @@ vi.mock("googleapis", () => ({
 // NOTE: withRetry, withMetrics, gmailRequest, audit — all REAL
 
 import {
-  listEmail,
-  readEmail,
-  archiveEmail,
-  deleteEmail,
-  spamEmail,
-  unarchiveEmail,
-  undeleteEmail,
-  unspamEmail,
+  gmailListEmail,
+  gmailReadEmail,
+  gmailArchiveEmail,
+  gmailDeleteEmail,
+  gmailSpamEmail,
+  gmailUnarchiveEmail,
+  gmailUndeleteEmail,
+  gmailUnspamEmail,
 } from "../../tools/gmail.ts";
 import { resetMetrics, getMetricsSummary } from "../../metrics.ts";
 
@@ -133,13 +133,14 @@ function parseAuditLines(): Array<Record<string, unknown>> {
       return {
         timestamp: params[0],
         requestId: params[1],
-        action: params[2],
-        emailId: params[3],
-        result: params[4],
-        subject: params[5],
-        from: params[6],
-        reason: params[7],
-        error: params[8],
+        resource: params[2],
+        action: params[3],
+        emailId: params[4],
+        result: params[5],
+        subject: params[6],
+        from: params[7],
+        reason: params[8],
+        error: params[9],
       };
     });
 }
@@ -165,7 +166,7 @@ describe("Tool → provider → audit integration", () => {
         },
       });
 
-      const result = await listEmail.invoke({ label: "INBOX", maxResults: 10 });
+      const result = await gmailListEmail.invoke({ label: "INBOX", maxResults: 10 });
       const parsed = JSON.parse(result);
 
       expect(parsed).toHaveLength(2);
@@ -194,7 +195,7 @@ describe("Tool → provider → audit integration", () => {
         return { data: { messages: [{ id: "msg-1", threadId: "t-1" }] } };
       });
 
-      const result = await listEmail.invoke({ label: "INBOX", maxResults: 5 });
+      const result = await gmailListEmail.invoke({ label: "INBOX", maxResults: 5 });
       const parsed = JSON.parse(result);
       expect(parsed).toHaveLength(1);
       expect(attempt).toBe(2);
@@ -203,7 +204,7 @@ describe("Tool → provider → audit integration", () => {
     it("returns empty array when no messages", async () => {
       mockList.mockResolvedValue({ data: {} });
 
-      const result = await listEmail.invoke({ label: "INBOX", maxResults: 10 });
+      const result = await gmailListEmail.invoke({ label: "INBOX", maxResults: 10 });
       expect(JSON.parse(result)).toEqual([]);
     });
   });
@@ -216,7 +217,7 @@ describe("Tool → provider → audit integration", () => {
         fakeEmailHeaders("msg-1", "alice@co.com", "Meeting tomorrow"),
       );
 
-      const result = await readEmail.invoke({ id: "msg-1" });
+      const result = await gmailReadEmail.invoke({ id: "msg-1" });
       const parsed = JSON.parse(result);
 
       expect(parsed.id).toBe("msg-1");
@@ -239,7 +240,7 @@ describe("Tool → provider → audit integration", () => {
     it("archives email and writes audit log", async () => {
       mockModify.mockResolvedValue({ data: {} });
 
-      const result = await archiveEmail.invoke({
+      const result = await gmailArchiveEmail.invoke({
         id: "msg-1",
         subject: "Newsletter",
         from: "news@co.com",
@@ -279,7 +280,7 @@ describe("Tool → provider → audit integration", () => {
         return { data: {} };
       });
 
-      const result = await archiveEmail.invoke({
+      const result = await gmailArchiveEmail.invoke({
         id: "msg-2",
         subject: "Report",
         from: "boss@co.com",
@@ -305,7 +306,7 @@ describe("Tool → provider → audit integration", () => {
       });
 
       await expect(
-        archiveEmail.invoke({ id: "msg-3", subject: "Test", from: "a@b.com" }),
+        gmailArchiveEmail.invoke({ id: "msg-3", subject: "Test", from: "a@b.com" }),
       ).rejects.toThrow("Permanent error");
 
       const audits = parseAuditLines();
@@ -323,7 +324,7 @@ describe("Tool → provider → audit integration", () => {
     it("deletes email and writes audit log", async () => {
       mockTrash.mockResolvedValue({ data: {} });
 
-      const result = await deleteEmail.invoke({
+      const result = await gmailDeleteEmail.invoke({
         id: "msg-4",
         subject: "Spam offer",
         from: "spam@bad.com",
@@ -350,7 +351,7 @@ describe("Tool → provider → audit integration", () => {
     it("marks email as spam and writes audit log", async () => {
       mockModify.mockResolvedValue({ data: {} });
 
-      const result = await spamEmail.invoke({
+      const result = await gmailSpamEmail.invoke({
         id: "msg-5",
         subject: "You won $1M",
         from: "prince@scam.com",
@@ -383,7 +384,7 @@ describe("Tool → provider → audit integration", () => {
     it("unarchiveEmail moves back to inbox and audits", async () => {
       mockModify.mockResolvedValue({ data: {} });
 
-      const result = await unarchiveEmail.invoke({ id: "msg-6" });
+      const result = await gmailUnarchiveEmail.invoke({ id: "msg-6" });
 
       expect(result).toContain("moved back to inbox");
       expect(mockModify).toHaveBeenCalledWith({
@@ -403,7 +404,7 @@ describe("Tool → provider → audit integration", () => {
     it("undeleteEmail restores from trash and audits", async () => {
       mockUntrash.mockResolvedValue({ data: {} });
 
-      const result = await undeleteEmail.invoke({ id: "msg-7" });
+      const result = await gmailUndeleteEmail.invoke({ id: "msg-7" });
 
       expect(result).toContain("restored from trash");
 
@@ -418,7 +419,7 @@ describe("Tool → provider → audit integration", () => {
     it("unspamEmail removes SPAM label and audits", async () => {
       mockModify.mockResolvedValue({ data: {} });
 
-      const result = await unspamEmail.invoke({ id: "msg-8" });
+      const result = await gmailUnspamEmail.invoke({ id: "msg-8" });
 
       expect(result).toContain("unmarked as spam");
       expect(mockModify).toHaveBeenCalledWith({
@@ -448,18 +449,18 @@ describe("Tool → provider → audit integration", () => {
         data: { messages: [{ id: "msg-10", threadId: "t-10" }] },
       });
       const listed = JSON.parse(
-        await listEmail.invoke({ label: "INBOX", maxResults: 5 }),
+        await gmailListEmail.invoke({ label: "INBOX", maxResults: 5 }),
       );
 
       // Step 2: Read
       mockGet.mockResolvedValue(
         fakeEmailHeaders("msg-10", "promo@co.com", "Spring Sale"),
       );
-      const read = JSON.parse(await readEmail.invoke({ id: listed[0].id }));
+      const read = JSON.parse(await gmailReadEmail.invoke({ id: listed[0].id }));
 
       // Step 3: Archive
       mockModify.mockResolvedValue({ data: {} });
-      await archiveEmail.invoke({
+      await gmailArchiveEmail.invoke({
         id: read.id,
         subject: read.subject,
         from: read.from,
@@ -489,19 +490,19 @@ describe("Tool → provider → audit integration", () => {
 
       // Fire 3 destructive operations concurrently (MAX_CONCURRENT = 2)
       const [r1, r2, r3] = await Promise.all([
-        archiveEmail.invoke({
+        gmailArchiveEmail.invoke({
           id: "m1",
           subject: "A",
           from: "a@a.com",
           reason: "cleanup",
         }),
-        deleteEmail.invoke({
+        gmailDeleteEmail.invoke({
           id: "m2",
           subject: "B",
           from: "b@b.com",
           reason: "spam",
         }),
-        spamEmail.invoke({
+        gmailSpamEmail.invoke({
           id: "m3",
           subject: "C",
           from: "c@c.com",

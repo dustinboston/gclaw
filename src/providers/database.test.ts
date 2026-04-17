@@ -37,7 +37,7 @@ describe('database provider', () => {
 		const sql = mockQuery.mock.calls[0][0] as string;
 		expect(sql).toContain('CREATE TABLE IF NOT EXISTS audit_log');
 		expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp');
-		expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_audit_log_email_id');
+		expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_audit_log_resource_id');
 		expect(sql).toContain('CREATE TABLE IF NOT EXISTS analytics');
 		expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_analytics_timestamp');
 		expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_analytics_tool');
