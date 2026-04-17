@@ -6,62 +6,14 @@
  * @module
  */
 
-import process from 'node:process';
-import {HumanMessage, tool, AIMessageChunk} from 'langchain';
+import {tool} from 'langchain';
 import z from 'zod';
 import {gmail, gmailRequest} from '../providers/gmail.ts';
 import {logAudit, type AuditMetadata} from '../audit.ts';
-import {logger} from '../logger.ts';
 
 function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
-
-/** Supervisor-level tool that delegates email requests to the email sub-agent. */
-export const manageEmail = tool(
-	async ({request}) => {
-		try {
-			const {emailAgent} = await import('../agents/email.ts');
-			const stream = await emailAgent.stream(
-				{messages: [new HumanMessage(request)]},
-				{recursionLimit: 150, streamMode: 'messages'},
-			);
-
-			let lastText = '';
-
-			for await (const [message] of stream) {
-				if (!(message instanceof AIMessageChunk)) {
-					continue;
-				}
-
-				if (message.text) {
-					lastText += message.text;
-				}
-			}
-
-			if (lastText) {
-				process.stdout.write('\n');
-			}
-
-			return 'Email request complete. Results already displayed to user.';
-		} catch (error) {
-			logger.error({err: error}, 'Email agent failed');
-			return `Email request failed: ${getErrorMessage(error)}`;
-		}
-	},
-	{
-		name: 'manage_email',
-		description: `
-    Manage the user's Gmail inbox.
-    Use this for any email-related request: cleaning up the inbox, listing emails,
-    reading messages, archiving, deleting, or marking as spam.
-    Input: natural language email request (e.g. 'clean up my inbox')
-    `,
-		schema: z.object({
-			request: z.string().describe('Natural language email request'),
-		}),
-	},
-);
 
 /** Lists message IDs from a Gmail label. */
 export const listEmail = tool(

@@ -36,7 +36,7 @@ describe("loadConfig", () => {
 
   it("applies defaults for optional values", () => {
     const config = loadConfig();
-    expect(config.googleAiModel).toBe("gemini-2.5-flash");
+    expect(config.googleAiModel).toBe("google-genai:gemini-3.1-pro-preview");
     expect(config.googleAiThinkingLevel).toBe("off");
     expect(config.oauthRedirectUrl).toBe("http://localhost:3000");
     expect(config.oauthPort).toBe(3000);

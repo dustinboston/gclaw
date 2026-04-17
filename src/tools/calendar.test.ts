@@ -1,16 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockStream, mockCalendarListList, mockEventsList, mockEventsInsert } =
+const { mockCalendarListList, mockEventsList, mockEventsInsert } =
   vi.hoisted(() => ({
-    mockStream: vi.fn(),
     mockCalendarListList: vi.fn(),
     mockEventsList: vi.fn(),
     mockEventsInsert: vi.fn().mockResolvedValue({}),
   }));
-
-vi.mock("../agents/calendar.ts", () => ({
-  calendarAgent: { stream: mockStream },
-}));
 
 vi.mock("../providers/calendar.ts", () => ({
   calendar: {
@@ -24,62 +19,10 @@ vi.mock("../config.ts", () => ({
   loadConfig: () => ({ defaultCalendarId: "primary" }),
 }));
 
-vi.mock("../logger.ts", () => ({
-  logger: {
-    info: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-import { manageCalendar, listEvents, createEvent } from "./calendar.ts";
-import { AIMessageChunk, HumanMessage } from "langchain";
+import { listEvents, createEvent } from "./calendar.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();
-});
-
-describe("manageCalendar", () => {
-  it("streams from calendar agent and returns completion message", async () => {
-    mockStream.mockReturnValue(
-      (async function* () {
-        yield [new AIMessageChunk({ content: "Your agenda..." })];
-      })(),
-    );
-    const result = await manageCalendar.invoke({ request: "show my agenda" });
-    expect(mockStream).toHaveBeenCalledWith(
-      { messages: [expect.any(HumanMessage)] },
-      { recursionLimit: 50, streamMode: "messages" },
-    );
-    expect(result).toBe(
-      "Calendar request complete. Results already displayed to user.",
-    );
-  });
-
-  it("handles AIMessageChunk with empty text", async () => {
-    mockStream.mockReturnValue(
-      (async function* () {
-        yield [new AIMessageChunk({ content: "" })];
-      })(),
-    );
-    const result = await manageCalendar.invoke({ request: "agenda" });
-    expect(result).toBe(
-      "Calendar request complete. Results already displayed to user.",
-    );
-  });
-
-  it("skips non-AIMessageChunk messages", async () => {
-    mockStream.mockReturnValue(
-      (async function* () {
-        yield [{ text: "not a chunk" }];
-      })(),
-    );
-    const result = await manageCalendar.invoke({ request: "agenda" });
-    expect(result).toBe(
-      "Calendar request complete. Results already displayed to user.",
-    );
-  });
 });
 
 describe("listEvents", () => {

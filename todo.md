@@ -90,24 +90,6 @@ Here's a comprehensive breakdown of what this codebase needs for enterprise read
 - No APM integration (Sentry, Datadog, etc.)
 - ~~No usage analytics~~ — every API call is persisted to PostgreSQL `analytics` table via `recordToolCall()` in `src/metrics.ts`; `getAnalytics(since?)` returns per-tool summaries (call counts, success/failure, avg/min/max latency)
 
----
-
-## What's Already Good
-
-The codebase has solid foundations:
-
-- **Clean architecture** — clear separation of providers, tools, and agents
-- **Strong type safety** — TypeScript throughout, Zod validation on all tool inputs and config
-- **Comprehensive unit tests** — 23 test files with 131 tests and edge cases covered
-- **Good layering** — multi-tier agent system (supervisor → clean/email/calendar/tasks agents)
-- **Rate limiter** — custom semaphore for Gmail, configurable via `GMAIL_MAX_CONCURRENT`
-- **Security** — AES-256-GCM encrypted token storage, Zod-validated config
-- **Observability** — structured logging (pino), request correlation IDs, tool/API metrics, audit trail
-- **Resilience** — exponential backoff with jitter for transient API failures
-- **Safeguards** — two-phase confirmation flow for destructive operations, undo tools, audit log with metadata
-
----
-
 ## Suggested Roadmap
 
 | Phase | Focus                                                                                        | Status                                              |

@@ -30,7 +30,7 @@ const envVarNames: Record<string, string> = {
 const configSchema = z.object({
 	// Google AI (Gemini)
 	googleAiApiKey: z.string().min(1),
-	googleAiModel: z.string().default('gemini-2.5-flash'),
+	googleAiModel: z.string().default("google-genai:gemini-3.1-pro-preview"),
 	googleAiThinkingLevel: z.enum(['off', 'low', 'medium', 'high']).default('off'),
 
 	// Google OAuth

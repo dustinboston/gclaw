@@ -5,59 +5,10 @@
  * @module
  */
 
-import process from 'node:process';
-import {HumanMessage, tool, AIMessageChunk} from 'langchain';
+import {tool} from 'langchain';
 import z from 'zod';
 import {calendar, calendarRequest} from '../providers/calendar.ts';
 import {loadConfig} from '../config.ts';
-import {logger} from '../logger.ts';
-
-/** Supervisor-level tool that delegates calendar requests to the calendar sub-agent. */
-export const manageCalendar = tool(
-	async ({request}) => {
-		try {
-			const {calendarAgent} = await import('../agents/calendar.ts');
-			const stream = await calendarAgent.stream(
-				{messages: [new HumanMessage(request)]},
-				{recursionLimit: 50, streamMode: 'messages'},
-			);
-
-			let lastText = '';
-
-			for await (const [message] of stream) {
-				if (!(message instanceof AIMessageChunk)) {
-					continue;
-				}
-
-				if (message.text) {
-					lastText += message.text;
-				}
-			}
-
-			if (lastText) {
-				process.stdout.write('\n');
-			}
-
-			return 'Calendar request complete. Results already displayed to user.';
-		} catch (error) {
-			logger.error({err: error}, 'Calendar agent failed');
-			const message = error instanceof Error ? error.message : String(error);
-			return `Calendar request failed: ${message}`;
-		}
-	},
-	{
-		name: 'manage_calendar',
-		description: `
-    Manage the user's Google Calendar.
-    Use this for any calendar-related request: viewing the agenda, listing events,
-    scheduling meetings, or checking availability.
-    Input: natural language calendar request (e.g. 'what's on my agenda today')
-    `,
-		schema: z.object({
-			request: z.string().describe('Natural language calendar request'),
-		}),
-	},
-);
 
 /** Lists events across all of the user's calendars in a time range. */
 export const listEvents = tool(

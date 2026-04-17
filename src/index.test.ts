@@ -10,9 +10,11 @@ const {
 	mockPoolEnd,
 	mockInitDatabase,
 	mockListSessions,
+	mockCreateDeepAgent,
 } = vi.hoisted(() => {
 	class MockAIMessageChunk {
 		text: string;
+		tool_calls: unknown[] | undefined;
 		constructor({content}: {content: string}) {
 			this.text = content;
 		}
@@ -40,47 +42,50 @@ const {
 		mockPoolEnd: vi.fn().mockResolvedValue(undefined),
 		mockInitDatabase: vi.fn().mockResolvedValue(undefined),
 		mockListSessions: vi.fn().mockResolvedValue([]),
+		mockCreateDeepAgent: vi.fn().mockReturnValue({stream: vi.fn()}),
 	};
 });
 
 vi.mock('dotenv/config', () => ({}));
 vi.mock('@langchain/langgraph-checkpoint-postgres', () => ({
 	PostgresSaver: class PostgresSaver {
-		constructor() {}
 		setup = mockCheckpointerSetup;
 	},
 }));
+vi.mock('deepagents', () => ({
+	createDeepAgent: mockCreateDeepAgent.mockReturnValue({stream: mockAgentStream}),
+	FilesystemBackend: class FilesystemBackend {
+		constructor(_options?: unknown) {}
+	},
+}));
 vi.mock('langchain', () => ({
-	createAgent: vi.fn().mockReturnValue({stream: mockAgentStream}),
 	HumanMessage: class HumanMessage {
 		constructor(public content: string) {}
 	},
 	AIMessageChunk: MockAIMessageChunk,
+	ToolMessage: class ToolMessage {
+		constructor(public content: string) {}
+	},
 }));
-vi.mock('./tools/clean.ts', () => ({cleanEmail: {}}));
 vi.mock('./tools/gmail.ts', () => ({
-	manageEmail: {},
 	listEmail: {},
 	readEmail: {},
 	archiveEmail: {},
 	deleteEmail: {},
 	spamEmail: {},
+	unarchiveEmail: {},
+	undeleteEmail: {},
+	unspamEmail: {},
 }));
 vi.mock('./tools/calendar.ts', () => ({
-	manageCalendar: {},
 	listEvents: {},
 	createEvent: {},
 }));
 vi.mock('./tools/tasks.ts', () => ({
-	manageTasks: {},
 	listTasks: {},
 	completeTask: {},
 	updateTask: {},
 	createTask: {},
-}));
-vi.mock('./model.ts', () => ({model: {}}));
-vi.mock('./agents-file.ts', () => ({
-	loadAgentsFile: vi.fn().mockResolvedValue('agent file content'),
 }));
 vi.mock('./logger.ts', () => ({
 	logger: {
@@ -97,6 +102,9 @@ vi.mock('./providers/database.ts', () => ({
 vi.mock('./session.ts', () => ({
 	createSession: vi.fn().mockReturnValue('test-session-id'),
 	listSessions: mockListSessions,
+}));
+vi.mock('./config.ts', () => ({
+	loadConfig: () => ({googleAiModel: 'test-model'}),
 }));
 vi.mock('node:readline/promises', () => ({
 	createInterface: vi.fn().mockReturnValue({
@@ -116,10 +124,19 @@ await import('./index.ts');
 
 process.stdout.write = originalWrite;
 
-describe('supervisor agent (index.ts)', () => {
+describe('deep agent entry (index.ts)', () => {
 	it('initializes database and checkpointer on startup', () => {
 		expect(mockInitDatabase).toHaveBeenCalledTimes(1);
 		expect(mockCheckpointerSetup).toHaveBeenCalledTimes(1);
+	});
+
+	it('creates a deep agent with tools, skills, and a checkpointer', () => {
+		expect(mockCreateDeepAgent).toHaveBeenCalledTimes(1);
+		const params = mockCreateDeepAgent.mock.calls[0][0];
+		expect(params.model).toBe('test-model');
+		expect(params.skills).toEqual(['/skills/']);
+		expect(params.tools.length).toBeGreaterThan(0);
+		expect(params.checkpointer).toBeDefined();
 	});
 
 	it('streams response for non-empty input', () => {
@@ -128,7 +145,6 @@ describe('supervisor agent (index.ts)', () => {
 	});
 
 	it('skips empty input', () => {
-		// Only 1 stream call despite 3 question calls (empty is skipped, exit breaks)
 		expect(mockAgentStream).toHaveBeenCalledTimes(1);
 	});
 

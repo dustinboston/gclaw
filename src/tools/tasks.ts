@@ -5,59 +5,10 @@
  * @module
  */
 
-import process from 'node:process';
-import {HumanMessage, tool, AIMessageChunk} from 'langchain';
+import {tool} from 'langchain';
 import z from 'zod';
 import {tasks, tasksRequest} from '../providers/tasks.ts';
 import {loadConfig} from '../config.ts';
-import {logger} from '../logger.ts';
-
-/** Supervisor-level tool that delegates task requests to the tasks sub-agent. */
-export const manageTasks = tool(
-	async ({request}) => {
-		try {
-			const {tasksAgent} = await import('../agents/tasks.ts');
-			const stream = await tasksAgent.stream(
-				{messages: [new HumanMessage(request)]},
-				{recursionLimit: 50, streamMode: 'messages'},
-			);
-
-			let lastText = '';
-
-			for await (const [message] of stream) {
-				if (!(message instanceof AIMessageChunk)) {
-					continue;
-				}
-
-				if (message.text) {
-					lastText += message.text;
-				}
-			}
-
-			if (lastText) {
-				process.stdout.write('\n');
-			}
-
-			return 'Task request complete. Results already displayed to user.';
-		} catch (error) {
-			logger.error({err: error}, 'Tasks agent failed');
-			const message = error instanceof Error ? error.message : String(error);
-			return `Task request failed: ${message}`;
-		}
-	},
-	{
-		name: 'manage_tasks',
-		description: `
-    Manage the user's tasks using Google Tasks.
-    Use this for any task-related request: listing tasks, creating new tasks,
-    completing tasks, or doing a weekly review.
-    Input: natural language task request (e.g. 'list my top 5 tasks')
-    `,
-		schema: z.object({
-			request: z.string().describe('Natural language task request'),
-		}),
-	},
-);
 
 /** Lists tasks across all of the user's task lists. */
 export const listTasks = tool(

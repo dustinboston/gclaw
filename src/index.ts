@@ -1,7 +1,8 @@
 /**
- * Application entry point. Sets up the supervisor agent with PostgreSQL-backed
- * conversation persistence and runs an interactive REPL that routes user
- * requests to specialized sub-agents (email, calendar, tasks, clean).
+ * Application entry point. Sets up the Deep Agent with PostgreSQL-backed
+ * conversation persistence and runs an interactive REPL. Tools are provided
+ * flat to the agent; multi-step workflows (like inbox cleanup) are described
+ * in `skills/` and loaded by the Deep Agent's filesystem backend.
  *
  * @module
  */
@@ -10,41 +11,69 @@ import * as readline from 'node:readline/promises';
 import process from 'node:process';
 import {readFileSync, appendFileSync} from 'node:fs';
 import 'dotenv/config'; // eslint-disable-line import-x/no-unassigned-import
+import {HumanMessage, AIMessageChunk, ToolMessage} from 'langchain';
 import {PostgresSaver} from '@langchain/langgraph-checkpoint-postgres';
-import {createAgent, HumanMessage, AIMessageChunk} from 'langchain';
-import {cleanEmail} from './tools/clean.ts';
-import {manageEmail} from './tools/gmail.ts';
-import {manageCalendar} from './tools/calendar.ts';
-import {manageTasks} from './tools/tasks.ts';
-import {model} from './model.ts';
-import {loadAgentsFile} from './agents-file.ts';
+import {createDeepAgent, FilesystemBackend} from 'deepagents';
+import {loadConfig} from './config.ts';
 import {logger} from './logger.ts';
 import {runWithContext} from './context.ts';
 import {logMetricsSummary, getAnalytics} from './metrics.ts';
-import {pool, initDatabase} from './providers/database.ts';
 import {createSession, listSessions} from './session.ts';
+import {pool, initDatabase} from './providers/database.ts';
+import {
+	listEmail,
+	readEmail,
+	archiveEmail,
+	deleteEmail,
+	spamEmail,
+	unarchiveEmail,
+	undeleteEmail,
+	unspamEmail,
+} from './tools/gmail.ts';
+import {listEvents, createEvent} from './tools/calendar.ts';
+import {
+	listTasks,
+	createTask,
+	completeTask,
+	updateTask,
+} from './tools/tasks.ts';
 
 // Setup
 // ----------------------------------------------------------------------------
+
+const config = loadConfig();
 
 await initDatabase();
 
 const checkpointer = new PostgresSaver(pool);
 await checkpointer.setup();
 
-const agentsFile = await loadAgentsFile();
-
-const supervisorPrompt = `
+const systemPrompt = `
 You are a helpful personal assistant. You help the user manage their email, calendar, and tasks.
 
 Today's date is ${new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}.
 
 # Tools
 
-- clean_email — Clean up the user's Gmail inbox. Handles listing, reading, archiving, deleting, and marking messages as spam.
-- manage_calendar — Manage Google Calendar across all the user's calendars. View the agenda, list events in a time range, schedule new meetings, and check availability.
-- manage_tasks — Manage Google Tasks across all the user's task lists. List tasks, create new tasks, mark tasks complete, and run weekly reviews.
-- manage_email — Manage the user's Gmail inbox. Handles listing, reading, archiving, deleting, and marking messages as spam.
+## Email management
+- list_email — list email message IDs with a given label.
+- read_email — read email metadata (subject, sender, time, etc) by message ID.
+- archive_email — archive (removes from inbox). Include subject, from, and reason.
+- delete_email — delete (moves to trash). Include subject, from, and reason.
+- spam_email — mark as spam. Include subject, from, and reason.
+- unarchive_email — undo an archive.
+- undelete_email — undo a delete.
+- unspam_email — undo a spam.
+
+## Calendar management
+- list_events — check the calendar for open slots before scheduling.
+- create_event — create a Google Calendar event.
+
+## Task management
+- list_tasks — check existing tasks before creating new ones.
+- create_task — create a Google Tasks reminder for follow-up.
+- complete_task — mark a task as complete.
+- update_task — update a task (e.g. change title, due date).
 
 # Guidelines
 
@@ -52,17 +81,33 @@ Today's date is ${new Date().toLocaleDateString('en-US', {weekday: 'long', year:
 - When a request involves multiple actions, use multiple tools in sequence.
 - When results are already displayed to the user by a tool, do not repeat them. Just confirm the action is done.
 - For requests that span multiple domains (e.g. "what do I have going on today"), call the relevant tools and combine the results.
-
----
-
-${agentsFile}
-
+- For multi-step workflows like cleaning up an inbox, follow the matching skill if one is loaded.
 `.trim();
 
-const supervisorAgent = createAgent({
-	model,
-	tools: [cleanEmail, manageCalendar, manageTasks, manageEmail],
-	systemPrompt: supervisorPrompt,
+const agent = createDeepAgent({
+	model: config.googleAiModel,
+	backend: new FilesystemBackend({rootDir: process.cwd(), virtualMode: true}),
+	skills: ['/skills/'],
+	tools: [
+		// Email
+		listEmail,
+		readEmail,
+		archiveEmail,
+		deleteEmail,
+		spamEmail,
+		unarchiveEmail,
+		undeleteEmail,
+		unspamEmail,
+		// Calendar
+		listEvents,
+		createEvent,
+		// Tasks
+		listTasks,
+		createTask,
+		completeTask,
+		updateTask,
+	],
+	systemPrompt,
 	checkpointer,
 });
 
@@ -88,6 +133,10 @@ async function printSessions(activeThreadId: string): Promise<void> {
 		logger.error({err: error}, 'Failed to list sessions');
 		console.log('Failed to list sessions.\n');
 	}
+}
+
+function truncate(text: string, max = 120): string {
+	return text.length > max ? text.slice(0, max - 3) + '...' : text;
 }
 
 // Interactive loop
@@ -195,15 +244,33 @@ while (true) {
 		try {
 			logger.info({input: trimmed}, 'User request');
 
-			const config = {configurable: {thread_id: threadId}}; // eslint-disable-line @typescript-eslint/naming-convention
-			const stream = await supervisorAgent.stream(
+			const runConfig = {configurable: {thread_id: threadId}}; // eslint-disable-line @typescript-eslint/naming-convention
+			const stream = await agent.stream(
 				{messages: [new HumanMessage(trimmed)]},
-				{...config, streamMode: 'messages'},
+				{...runConfig, streamMode: 'messages'},
 			);
 
+			const seenToolCalls = new Set<string>();
 			for await (const [message] of stream) {
-				if (message instanceof AIMessageChunk && message.text) {
-					process.stdout.write(message.text);
+				if (message instanceof AIMessageChunk) {
+					if (message.text) {
+						process.stdout.write(message.text);
+					}
+
+					for (const call of message.tool_calls ?? []) {
+						if (!call.id || seenToolCalls.has(call.id)) {
+							continue;
+						}
+
+						seenToolCalls.add(call.id);
+						const args = JSON.stringify(call.args ?? {});
+						process.stdout.write(`\n[tool] ${call.name} ${truncate(args)}\n`);
+					}
+				} else if (message instanceof ToolMessage) {
+					const content = typeof message.content === 'string'
+						? message.content
+						: JSON.stringify(message.content);
+					process.stdout.write(`[tool:${message.name ?? 'result'}] ${truncate(content)}\n`);
 				}
 			}
 

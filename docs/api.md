@@ -1,64 +1,14 @@
 # Tool API Reference
 
-G-Claw exposes its functionality through LangChain tools organized into four domains: email cleanup, email management, calendar, and tasks. Each tool is a LangChain `tool()` with a Zod-validated schema.
+G-Claw exposes its functionality through LangChain tools organized into three domains: Gmail, Calendar, and Tasks. Each tool is a LangChain `tool()` with a Zod-validated schema, and every tool is registered directly on the Deep Agent — there are no supervisor wrapper tools.
 
-## Supervisor Tools
-
-These are the top-level tools available to the supervisor agent. Each delegates to a specialized sub-agent.
-
-### `clean_email`
-
-Clean up the user's inbox with a two-phase confirmation flow.
-
-| Parameter | Type     | Required | Description                    |
-| --------- | -------- | -------- | ------------------------------ |
-| `request` | `string` | Yes      | Natural language email request |
-
-**Behavior:**
-
-1. **Plan phase** — reads all inbox emails and proposes an action plan (archive, delete, spam, keep).
-2. **Confirm** — displays the plan and prompts the user with `Execute this plan? (yes/no)`.
-3. **Execute phase** — carries out the approved plan using destructive tools.
-
-Returns `"Email cleanup cancelled by user."` if the user declines.
-
-**Source:** `src/tools/clean.ts`
-
-### `manage_email`
-
-Route an email request to the email sub-agent.
-
-| Parameter | Type     | Required | Description                    |
-| --------- | -------- | -------- | ------------------------------ |
-| `request` | `string` | Yes      | Natural language email request |
-
-**Source:** `src/tools/gmail.ts`
-
-### `manage_calendar`
-
-Route a calendar request to the calendar sub-agent.
-
-| Parameter | Type     | Required | Description                       |
-| --------- | -------- | -------- | --------------------------------- |
-| `request` | `string` | Yes      | Natural language calendar request |
-
-**Source:** `src/tools/calendar.ts`
-
-### `manage_tasks`
-
-Route a task request to the tasks sub-agent.
-
-| Parameter | Type     | Required | Description                   |
-| --------- | -------- | -------- | ----------------------------- |
-| `request` | `string` | Yes      | Natural language task request |
-
-**Source:** `src/tools/tasks.ts`
+Multi-step workflows (e.g. inbox cleanup) are expressed as Markdown skills under `skills/`, not as dedicated tools. The Deep Agent follows the matching skill based on the user request. See [architecture.md](./architecture.md#skills).
 
 ---
 
 ## Gmail Tools
 
-Available to the email agent and the clean agent (execute mode). Defined in `src/tools/gmail.ts`.
+Defined in `src/tools/gmail.ts`.
 
 ### `list_email`
 
@@ -167,7 +117,7 @@ Undo a spam action by removing `SPAM` and re-adding `INBOX`.
 
 ## Calendar Tools
 
-Available to the calendar agent and the clean agent (execute mode). Defined in `src/tools/calendar.ts`.
+Defined in `src/tools/calendar.ts`.
 
 ### `list_events`
 
@@ -208,7 +158,7 @@ Create a Google Calendar event on the default calendar.
 
 ## Tasks Tools
 
-Available to the tasks agent and the clean agent (execute mode). Defined in `src/tools/tasks.ts`.
+Defined in `src/tools/tasks.ts`.
 
 ### `list_tasks`
 
@@ -266,23 +216,21 @@ Create a new task.
 
 ## Audit Log Format
 
-All destructive email operations write structured JSON lines to `audit.log`. Each entry contains:
+All destructive email operations write one row to the PostgreSQL `audit_log` table. Each row contains:
 
-```json
-{
-  "timestamp": "2026-04-10T14:30:00.000Z",
-  "requestId": "uuid-v4",
-  "action": "archive | delete | spam | unarchive | undelete | unspam",
-  "emailId": "message-id",
-  "result": "success | failure",
-  "subject": "Email subject",
-  "from": "sender@example.com",
-  "reason": "Why the action was taken",
-  "error": "Error message (failure only)"
-}
-```
+| Column       | Type          | Notes                                                        |
+| ------------ | ------------- | ------------------------------------------------------------ |
+| `timestamp`  | `timestamptz` | Defaults to `NOW()`                                          |
+| `request_id` | `text`        | UUID from `AsyncLocalStorage` context                        |
+| `action`     | `text`        | `archive`, `delete`, `spam`, `unarchive`, `undelete`, `unspam` |
+| `email_id`   | `text`        | Gmail message ID                                             |
+| `result`     | `text`        | `success` or `failure`                                       |
+| `subject`    | `text`        | Email subject                                                |
+| `from`       | `text`        | Email sender                                                 |
+| `reason`     | `text`        | Why the action was taken                                     |
+| `error`      | `text`        | Error message (failure only)                                 |
 
-**Source:** `src/audit.ts`
+**Source:** `src/audit.ts` (schema in `src/providers/database.ts`)
 
 ---
 

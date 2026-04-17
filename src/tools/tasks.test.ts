@@ -1,17 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockStream, mockTasklistsList, mockTasksList, mockTasksPatch, mockTasksInsert } =
+const { mockTasklistsList, mockTasksList, mockTasksPatch, mockTasksInsert } =
   vi.hoisted(() => ({
-    mockStream: vi.fn(),
     mockTasklistsList: vi.fn(),
     mockTasksList: vi.fn(),
     mockTasksPatch: vi.fn().mockResolvedValue({}),
     mockTasksInsert: vi.fn().mockResolvedValue({}),
   }));
-
-vi.mock("../agents/tasks.ts", () => ({
-  tasksAgent: { stream: mockStream },
-}));
 
 vi.mock("../providers/tasks.ts", () => ({
   tasks: {
@@ -29,68 +24,15 @@ vi.mock("../config.ts", () => ({
   loadConfig: () => ({ defaultTaskListId: "@default" }),
 }));
 
-vi.mock("../logger.ts", () => ({
-  logger: {
-    info: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
 import {
-  manageTasks,
   listTasks,
   completeTask,
   updateTask,
   createTask,
 } from "./tasks.ts";
-import { AIMessageChunk, HumanMessage } from "langchain";
 
 beforeEach(() => {
   vi.clearAllMocks();
-});
-
-describe("manageTasks", () => {
-  it("streams from tasks agent and returns completion message", async () => {
-    mockStream.mockReturnValue(
-      (async function* () {
-        yield [new AIMessageChunk({ content: "Here are your tasks..." })];
-      })(),
-    );
-    const result = await manageTasks.invoke({ request: "list my tasks" });
-    expect(mockStream).toHaveBeenCalledWith(
-      { messages: [expect.any(HumanMessage)] },
-      { recursionLimit: 50, streamMode: "messages" },
-    );
-    expect(result).toBe(
-      "Task request complete. Results already displayed to user.",
-    );
-  });
-
-  it("handles AIMessageChunk with empty text", async () => {
-    mockStream.mockReturnValue(
-      (async function* () {
-        yield [new AIMessageChunk({ content: "" })];
-      })(),
-    );
-    const result = await manageTasks.invoke({ request: "tasks" });
-    expect(result).toBe(
-      "Task request complete. Results already displayed to user.",
-    );
-  });
-
-  it("skips non-AIMessageChunk messages", async () => {
-    mockStream.mockReturnValue(
-      (async function* () {
-        yield [{ text: "not a chunk" }];
-      })(),
-    );
-    const result = await manageTasks.invoke({ request: "tasks" });
-    expect(result).toBe(
-      "Task request complete. Results already displayed to user.",
-    );
-  });
 });
 
 describe("listTasks", () => {

@@ -1,16 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 
-const { mockStream, mockList, mockGet, mockModify, mockTrash, mockUntrash } = vi.hoisted(() => ({
-  mockStream: vi.fn(),
+const { mockList, mockGet, mockModify, mockTrash, mockUntrash } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockGet: vi.fn(),
   mockModify: vi.fn().mockResolvedValue({}),
   mockTrash: vi.fn().mockResolvedValue({}),
   mockUntrash: vi.fn().mockResolvedValue({}),
-}));
-
-vi.mock("../agents/email.ts", () => ({
-  emailAgent: { stream: mockStream },
 }));
 
 vi.mock("../providers/gmail.ts", () => ({
@@ -36,17 +31,7 @@ vi.mock("../audit.ts", () => ({
   logAudit: mockLogAudit,
 }));
 
-vi.mock("../logger.ts", () => ({
-  logger: {
-    info: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
 import {
-  manageEmail,
   listEmail,
   readEmail,
   archiveEmail,
@@ -56,49 +41,6 @@ import {
   undeleteEmail,
   unspamEmail,
 } from "./gmail.ts";
-import { AIMessageChunk, HumanMessage } from "langchain";
-
-describe("manageEmail", () => {
-  it("streams from the email agent and returns completion message", async () => {
-    mockStream.mockReturnValue(
-      (async function* () {
-        yield [new AIMessageChunk({ content: "Processed 5 emails" })];
-      })(),
-    );
-    const result = await manageEmail.invoke({ request: "clean my inbox" });
-    expect(mockStream).toHaveBeenCalledWith(
-      { messages: [expect.any(HumanMessage)] },
-      { recursionLimit: 150, streamMode: "messages" },
-    );
-    expect(result).toBe(
-      "Email request complete. Results already displayed to user.",
-    );
-  });
-
-  it("handles AIMessageChunk with empty text", async () => {
-    mockStream.mockReturnValue(
-      (async function* () {
-        yield [new AIMessageChunk({ content: "" })];
-      })(),
-    );
-    const result = await manageEmail.invoke({ request: "emails" });
-    expect(result).toBe(
-      "Email request complete. Results already displayed to user.",
-    );
-  });
-
-  it("skips non-AIMessageChunk messages", async () => {
-    mockStream.mockReturnValue(
-      (async function* () {
-        yield [{ text: "not a chunk" }];
-      })(),
-    );
-    const result = await manageEmail.invoke({ request: "emails" });
-    expect(result).toBe(
-      "Email request complete. Results already displayed to user.",
-    );
-  });
-});
 
 describe("listEmail", () => {
   it("returns messages as JSON", async () => {
